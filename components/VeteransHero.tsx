@@ -67,7 +67,7 @@ export default function VeteransHero() {
       {/* Dog Tags Image Container - No movement animations */}
       <View style={styles.dogTagsContainer}>
         <Image
-          source={resolveImageSource(require('@/assets/images/2a26ea07-43d6-4e4b-9dde-646e5e9e5838.png'))}
+         source={require('@/assets/images/2a26ea07-43d6-4e4b-9dde-646e5e9e5838.png')}
           style={styles.dogTagsImage}
           resizeMode="contain"
         />
