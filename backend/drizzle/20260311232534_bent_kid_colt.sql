@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "disclaimer_accepted_at" timestamp;

@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "Resolve Within",
+    "slug": "resolve-within",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/app-icon-nkg.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/app-icon-nkg.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.Natively",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSUserNotificationsUsageDescription": "Resolve Within may send gentle reminders to help you pause, breathe, or check in during the day.",
+        "NSLocationWhenInUseUsageDescription": "Location may be used to help find nearby mental health resources or crisis support services."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/app-icon-nkg.png",
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.Natively",
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/final_quest_240x240.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-router",
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/app-icon-nkg.png",
+          "color": "#FFD700",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "Resolve Within",
+          "iosDisplayInForeground": true
+        }
+      ],
+      "expo-audio"
+    ],
+    "scheme": "resolvewithin",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "backendUrl": "https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev",
+      "eas": {
+        "projectId": "1ab9b6ed-f00e-494c-813d-4b9d0d1e998f"
+      }
+    }
+  }
+}
