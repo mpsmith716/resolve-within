@@ -1,6 +1,7 @@
 
 import React from 'react';
 import {
+  Alert,
   View,
   Text,
   TouchableOpacity,
@@ -80,12 +81,25 @@ export default function FloatingTabBar({ tabs }: FloatingTabBarProps) {
     const isProtected = PROTECTED_TAB_NAMES.includes(tab.name);
     console.log('Tab pressed:', tab.name, '| protected:', isProtected, '| authenticated:', !!user);
 
-    if (isProtected && !user) {
-      const context = TAB_AUTH_CONTEXT[tab.name] ?? tab.name;
-      console.log('[Auth Guard] Redirecting unauthenticated user to auth, context:', context);
-      router.replace(`/auth?context=${context}` as any);
-      return;
-    }
+   if (isProtected && !user) {
+  const context = TAB_AUTH_CONTEXT[tab.name] ?? tab.name;
+
+  Alert.alert(
+    'Sign in required',
+    context === 'journal'
+      ? 'Your journal is private and securely tied to your account. Please sign in or create a free account to save and view journal entries.'
+      : 'Please sign in or create a free account to access this section.',
+    [
+      { text: 'Maybe Later', style: 'cancel' },
+      {
+        text: 'Sign In',
+        onPress: () => router.replace(`/auth?context=${context}` as any),
+      },
+    ]
+  );
+
+  return;
+}
 
     router.push(tab.route);
   };

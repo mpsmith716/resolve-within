@@ -39,9 +39,15 @@ const DEFAULT_MESSAGE =
 export default function AuthScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ context?: string; returnTo?: string }>();
-  const { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, loading: authLoading } = useAuth();
+  const {
+  signInWithGoogle,
+  signInWithApple,
+  signInWithEmail,
+  signUpWithEmail,
+  continueAsGuest,
+  loading: authLoading,
+} = useAuth();  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
 
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -127,13 +133,10 @@ export default function AuthScreen() {
   };
 
   const handleContinueWithout = () => {
-    console.log('[Auth] User tapped Continue without signing in');
-    try {
-      router.back();
-    } catch {
-      router.replace('/');
-    }
-  };
+  console.log('[Auth] User tapped Continue without signing in');
+  continueAsGuest();
+  router.replace('/(tabs)/(home)' as any);
+};
 
   const handleSwitchMode = () => {
     console.log('[Auth] User switched mode to:', mode === 'signin' ? 'signup' : 'signin');

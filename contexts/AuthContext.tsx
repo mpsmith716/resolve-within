@@ -26,6 +26,8 @@ interface AuthContextType {
   signInWithGitHub: () => Promise<void>;
   signOut: () => Promise<void>;
   fetchUser: () => Promise<void>;
+  isGuest: boolean;
+continueAsGuest: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,6 +78,7 @@ function openOAuthPopup(provider: string): Promise<string> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
     console.log("[Auth] Initializing AuthProvider, loading user session...");
@@ -194,6 +197,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = () => signInWithSocial("google");
   const signInWithApple = () => signInWithSocial("apple");
   const signInWithGitHub = () => signInWithSocial("github");
+  const continueAsGuest = () => {
+  console.log("[Auth] Continuing as guest");
+  setIsGuest(true);
+  setUser(null);
+  setLoading(false);
+};
 
   const signOut = async () => {
     try {
@@ -205,6 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Always clear local state, even if API call fails
       console.log("[Auth] Clearing local auth state");
       setUser(null);
+      setIsGuest(false);
       try {
         await clearAuthTokens();
       } catch (tokenError: any) {
@@ -225,6 +235,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGitHub,
         signOut,
         fetchUser,
+        isGuest,
+        continueAsGuest,
       }}
     >
       {children}
@@ -239,9 +251,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
  */
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  
+
   if (context === undefined) {
-    // Log warning in development
     if (__DEV__) {
       console.warn(
         "[Auth] useAuth() called outside AuthProvider. " +
@@ -249,8 +260,7 @@ export function useAuth(): AuthContextType {
         "Make sure your app is wrapped with <AuthProvider>."
       );
     }
-    
-    // Return safe defaults instead of throwing
+
     return {
       user: null,
       loading: false,
@@ -275,8 +285,12 @@ export function useAuth(): AuthContextType {
       fetchUser: async () => {
         console.error("[Auth] fetchUser called outside AuthProvider");
       },
+      isGuest: false,
+      continueAsGuest: () => {
+        console.error("[Auth] continueAsGuest called outside AuthProvider");
+      },
     };
   }
-  
+
   return context;
 }
