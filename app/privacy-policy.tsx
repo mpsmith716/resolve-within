@@ -55,9 +55,6 @@ export default function PrivacyPolicyScreen() {
   const locationUsageText = 'Location is used only for support resource discovery';
   const locationDisableText = 'Users may disable location access at any time through device settings';
 
-  const donationsTitle = 'Donations';
-  const donationsText = 'Donations to The Resolve Within Project may be processed through third-party payment services. The app does not directly store payment card information. Payment processing is handled securely by trusted third-party providers.';
-
   const dataStorageTitle = 'Data Storage';
   const dataStorageText = 'Some information may be stored locally on your device for app functionality. Future versions may optionally store data securely in cloud services to enable features like data sync across devices.';
 
@@ -69,7 +66,6 @@ export default function PrivacyPolicyScreen() {
   const thirdParty1 = 'Maps and location services';
   const thirdParty2 = 'Analytics and app performance monitoring';
   const thirdParty3 = 'Crash reporting and error tracking';
-  const thirdParty4 = 'Payment processing for donations';
   const thirdPartyDisclaimerText = 'These services have their own privacy policies and data handling practices.';
 
   const securityTitle = 'Security';
@@ -167,12 +163,6 @@ export default function PrivacyPolicyScreen() {
             </View>
           </View>
 
-          {/* Section 3: Donations */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{donationsTitle}</Text>
-            <Text style={styles.paragraph}>{donationsText}</Text>
-          </View>
-
           {/* Section 4: Data Storage */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{dataStorageTitle}</Text>
@@ -201,10 +191,6 @@ export default function PrivacyPolicyScreen() {
               <View style={styles.bulletItem}>
                 <View style={styles.bulletDot} />
                 <Text style={styles.bulletText}>{thirdParty3}</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <View style={styles.bulletDot} />
-                <Text style={styles.bulletText}>{thirdParty4}</Text>
               </View>
             </View>
             <Text style={styles.paragraph}>{thirdPartyDisclaimerText}</Text>

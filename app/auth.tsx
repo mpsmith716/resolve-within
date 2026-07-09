@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -10,10 +12,12 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 const GOLD = '#C9A84C';
 const NAVY_DARK = '#0A1628';
@@ -35,17 +39,17 @@ const DEFAULT_MESSAGE =
 export default function AuthScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ context?: string; returnTo?: string }>();
-
-  const {
-    user,
-    signInWithGoogle,
-    signInWithApple,
-    loading: authLoading,
-  } = useAuth();
+  const { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, loading: authLoading } = useAuth();
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const contextKey = params.context ?? '';
   const returnTo = params.returnTo ?? '';
@@ -53,55 +57,82 @@ export default function AuthScreen() {
 
   const titleText = mode === 'signin' ? 'Welcome Back' : 'Create Account';
   const switchText = mode === 'signin' ? 'Create Account' : 'Already have an account? Sign In';
+  const submitButtonText = mode === 'signin' ? 'Sign In' : 'Create Account';
 
-  useEffect(() => {
-    if (!user) return;
-
-    console.log('[Auth] User detected, redirecting after login...');
-
+  const handlePostAuthRedirect = () => {
     if (returnTo) {
+      console.log('[Auth] Post-login redirect to returnTo:', returnTo);
       router.replace(returnTo as any);
+    } else {
+      console.log('[Auth] Post-login redirect to tabs');
+      router.replace('/(tabs)');
+    }
+  };
+
+  const handleEmailSubmit = async () => {
+    console.log('[Auth] User tapped email submit button, mode:', mode);
+    setErrorMessage('');
+
+    if (!email.trim()) {
+      setErrorMessage('Please enter your email address.');
+      return;
+    }
+    if (!password.trim()) {
+      setErrorMessage('Please enter your password.');
+      return;
+    }
+    if (mode === 'signup' && !name.trim()) {
+      setErrorMessage('Please enter your name.');
       return;
     }
 
-    router.replace('/(tabs)' as any);
-  }, [user, returnTo, router]);
-
-  useEffect(() => {
-  if (user) {
-    console.log('[Auth] User detected, stopping loading spinner');
-    setLoading(false);
-  }
-}, [user]);
-
-const handleSocialAuth = async (provider: 'google' | 'apple') => {
-  console.log('[Auth] User tapped social auth button:', provider);
-  setErrorMessage('');
-  setLoading(true);
-
-  try {
-    if (provider === 'google') {
-      await signInWithGoogle();
-    } else {
-      await signInWithApple();
-    }
-
-    // 🔥 Fallback: stop spinner if something fails silently
-    setTimeout(() => {
-      console.log('[Auth] Safety timeout hit, stopping loading spinner');
+    setLoading(true);
+    try {
+      if (mode === 'signin') {
+        console.log('[Auth] Calling signInWithEmail for:', email);
+        await signInWithEmail(email.trim(), password);
+        console.log('[Auth] Email sign-in successful');
+      } else {
+        console.log('[Auth] Calling signUpWithEmail for:', email);
+        await signUpWithEmail(email.trim(), password, name.trim());
+        console.log('[Auth] Email sign-up successful');
+      }
+      handlePostAuthRedirect();
+    } catch (error: any) {
+      console.error('[Auth] Email auth error:', error?.message || error);
+      setErrorMessage(error?.message || 'Unable to sign in. Please check your details and try again.');
+    } finally {
       setLoading(false);
-    }, 8000);
+    }
+  };
 
-  } catch (error: any) {
-    console.error('[Auth] Social auth error:', error?.message || error);
-    setErrorMessage(error?.message || 'Unable to sign in. Please try again.');
-    setLoading(false);
-  }
-};
+  const handleSocialAuth = async (provider: 'google' | 'apple') => {
+    console.log('[Auth] User tapped social auth button:', provider);
+    setErrorMessage('');
+    setLoading(true);
+    try {
+      if (provider === 'google') {
+        await signInWithGoogle();
+      } else {
+        await signInWithApple();
+      }
+      console.log('[Auth] Social auth successful:', provider);
+      handlePostAuthRedirect();
+    } catch (error: any) {
+      console.error('[Auth] Social auth error:', error?.message || error);
+      setErrorMessage('Unable to sign in. Please check your details and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleContinueWithout = () => {
     console.log('[Auth] User tapped Continue without signing in');
-    router.replace('/(tabs)' as any);
+    try {
+      router.back();
+    } catch {
+      router.replace('/');
+    }
   };
 
   const handleSwitchMode = () => {
@@ -109,6 +140,13 @@ const handleSocialAuth = async (provider: 'google' | 'apple') => {
     setMode(mode === 'signin' ? 'signup' : 'signin');
     setErrorMessage('');
   };
+
+  const handleTogglePassword = () => {
+    console.log('[Auth] User toggled password visibility');
+    setShowPassword((prev) => !prev);
+  };
+
+  const eyeIcon = showPassword ? 'eye-off-outline' : 'eye-outline';
 
   if (authLoading) {
     return (
@@ -130,6 +168,7 @@ const handleSocialAuth = async (provider: 'google' | 'apple') => {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            {/* Logo */}
             <View style={styles.iconContainer}>
               <View style={styles.logoGlow}>
                 <Image
@@ -140,22 +179,132 @@ const handleSocialAuth = async (provider: 'google' | 'apple') => {
               </View>
             </View>
 
+            {/* App name */}
             <Text style={styles.appName}>Resolve Within</Text>
+
+            {/* Title */}
             <Text style={styles.title}>{titleText}</Text>
+
+            {/* Context message */}
             <Text style={styles.subtitle}>{contextMessage}</Text>
 
-            {user?.email ? (
-              <View style={styles.successContainer}>
-                <Text style={styles.successText}>Signed in as {user.email}</Text>
-              </View>
-            ) : null}
+            {/* Apple-compliance disclaimer (always visible on every platform) */}
+            <View style={styles.disclaimerBlock}>
+              <Text style={styles.disclaimerText}>
+                Resolve Within is a wellness support app and is not a replacement for professional medical care, therapy, or emergency services.
+              </Text>
+              <Text style={styles.disclaimerCrisisText}>
+                If you are in crisis, call 911 or 988 immediately.
+              </Text>
+            </View>
 
+            {/* Error message */}
             {errorMessage ? (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{errorMessage}</Text>
               </View>
             ) : null}
 
+            {/* Email/Password Form */}
+            <View style={styles.formContainer}>
+              {/* Name field (signup only) */}
+              {mode === 'signup' && (
+                <View style={styles.fieldWrapper}>
+                  <Text style={styles.fieldLabel}>Name</Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      focusedField === 'name' && styles.inputFocused,
+                    ]}
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Your name"
+                    placeholderTextColor={MUTED}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    onFocus={() => setFocusedField('name')}
+                    onBlur={() => setFocusedField(null)}
+                    editable={!loading}
+                  />
+                </View>
+              )}
+
+              {/* Email field */}
+              <View style={styles.fieldWrapper}>
+                <Text style={styles.fieldLabel}>Email</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    focusedField === 'email' && styles.inputFocused,
+                  ]}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="you@example.com"
+                  placeholderTextColor={MUTED}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  onFocus={() => setFocusedField('email')}
+                  onBlur={() => setFocusedField(null)}
+                  editable={!loading}
+                />
+              </View>
+
+              {/* Password field */}
+              <View style={styles.fieldWrapper}>
+                <Text style={styles.fieldLabel}>Password</Text>
+                <View style={styles.passwordWrapper}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      styles.passwordInput,
+                      focusedField === 'password' && styles.inputFocused,
+                    ]}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Password"
+                    placeholderTextColor={MUTED}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                    editable={!loading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeToggle}
+                    onPress={handleTogglePassword}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name={eyeIcon} size={20} color={MUTED} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Submit button */}
+              <TouchableOpacity
+                style={[styles.primaryButton, loading && styles.buttonDisabled]}
+                onPress={handleEmailSubmit}
+                disabled={loading}
+                activeOpacity={0.85}
+              >
+                {loading ? (
+                  <ActivityIndicator color={NAVY_DARK} />
+                ) : (
+                  <Text style={styles.primaryButtonText}>{submitButtonText}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Apple sign in (iOS only) */}
             {Platform.OS === 'ios' && (
               <TouchableOpacity
                 style={[styles.primaryButton, loading && styles.buttonDisabled]}
@@ -171,6 +320,7 @@ const handleSocialAuth = async (provider: 'google' | 'apple') => {
               </TouchableOpacity>
             )}
 
+            {/* Google sign in */}
             <TouchableOpacity
               style={[
                 Platform.OS === 'ios' ? styles.secondaryButton : styles.primaryButton,
@@ -183,18 +333,13 @@ const handleSocialAuth = async (provider: 'google' | 'apple') => {
               {loading ? (
                 <ActivityIndicator color={Platform.OS === 'ios' ? GOLD : NAVY_DARK} />
               ) : (
-                <Text
-                  style={
-                    Platform.OS === 'ios'
-                      ? styles.secondaryButtonText
-                      : styles.primaryButtonText
-                  }
-                >
+                <Text style={Platform.OS === 'ios' ? styles.secondaryButtonText : styles.primaryButtonText}>
                   Sign In with Google
                 </Text>
               )}
             </TouchableOpacity>
 
+            {/* Switch mode link */}
             <TouchableOpacity
               style={styles.switchModeButton}
               onPress={handleSwitchMode}
@@ -203,10 +348,12 @@ const handleSocialAuth = async (provider: 'google' | 'apple') => {
               <Text style={styles.switchModeText}>{switchText}</Text>
             </TouchableOpacity>
 
+            {/* Supportive message */}
             <Text style={styles.supportText}>
               You can still access support tools without an account
             </Text>
 
+            {/* Continue without signing in */}
             <TouchableOpacity
               style={styles.continueWithoutButton}
               onPress={handleContinueWithout}
@@ -285,22 +432,6 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingHorizontal: 8,
   },
-  successContainer: {
-    width: '100%',
-    backgroundColor: 'rgba(34, 197, 94, 0.12)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#22C55E',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  successText: {
-    color: '#86EFAC',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
   errorContainer: {
     width: '100%',
     backgroundColor: 'rgba(212, 160, 23, 0.12)',
@@ -376,5 +507,86 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textDecorationLine: 'underline',
     textAlign: 'center',
+  },
+  // Email form styles
+  formContainer: {
+    width: '100%',
+    marginBottom: 4,
+  },
+  fieldWrapper: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    color: MUTED,
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  input: {
+    width: '100%',
+    height: 52,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    color: WHITE,
+    fontSize: 15,
+  },
+  inputFocused: {
+    borderColor: GOLD,
+  },
+  passwordWrapper: {
+    position: 'relative',
+    width: '100%',
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  eyeToggle: {
+    position: 'absolute',
+    right: 14,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disclaimerBlock: {
+    width: '100%',
+    marginBottom: 24,
+    paddingHorizontal: 4,
+  },
+  disclaimerText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: MUTED,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  disclaimerCrisisText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: GOLD,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  dividerRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(136,153,170,0.25)',
+  },
+  dividerText: {
+    color: MUTED,
+    fontSize: 13,
+    marginHorizontal: 12,
+    fontWeight: '500',
   },
 });

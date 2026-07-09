@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { authenticatedGet, authenticatedPost } from '@/utils/api';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useRouter } from 'expo-router';
@@ -239,16 +239,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
 
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    console.log('ProfileScreen: Component mounted, fetching profile data');
-    fetchProfileData();
-  }, [user]);
-
-  async function fetchProfileData() {
+  const fetchProfileData = useCallback(async () => {
     if (!user) return;
     try {
       console.log('ProfileScreen: Fetching profile data from API');
@@ -278,7 +269,16 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    console.log('ProfileScreen: Component mounted, fetching profile data');
+    fetchProfileData();
+  }, [user, fetchProfileData]);
 
   async function handleSignOut() {
     console.log('ProfileScreen: User tapped Sign Out button');
@@ -486,28 +486,6 @@ export default function ProfileScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Legal & Support</Text>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                console.log('ProfileScreen: User tapped Support the Mission');
-                router.push('/support-mission');
-              }}
-            >
-              <IconSymbol
-                ios_icon_name="heart.fill"
-                android_material_icon_name="favorite"
-                size={24}
-                color={colors.accent}
-              />
-              <Text style={styles.menuItemText}>Support the Mission</Text>
-              <IconSymbol
-                ios_icon_name="chevron.right"
-                android_material_icon_name="arrow-forward"
-                size={20}
-                color={colors.textSecondary}
-              />
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {

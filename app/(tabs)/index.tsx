@@ -185,10 +185,12 @@ export default function HomeScreen() {
 
   return (
     <LinearGradient colors={safeGradient} style={styles.container}>
-      <ReportModal
-        visible={reportModalVisible}
-        onClose={() => setReportModalVisible(false)}
-      />
+      {/* 
+<ReportModal
+  visible={reportModalVisible}
+  onClose={() => setReportModalVisible(false)}
+/>
+*/}
 
       <Animated.View style={{ flex: 1, opacity: contentFadeAnim }}>
         <ScrollView

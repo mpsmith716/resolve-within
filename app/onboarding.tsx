@@ -66,16 +66,12 @@ export default function OnboardingScreen() {
   };
 
   const renderStep1 = () => {
-    const rawName =
-  user?.name ||
-  user?.user_metadata?.name ||
-  user?.user_metadata?.first_name ||
-  profile?.first_name ||
-  profile?.username ||
-  user?.email?.split('@')[0] ||
-  "there";
-
-const displayName = rawName.split(' ')[0];
+    const displayName =
+      user?.user_metadata?.first_name ||
+      user?.user_metadata?.name ||
+      profile?.first_name ||
+      profile?.username ||
+      "there";
 
     const greeting = `Hello, ${displayName} 👋`;
     const question = "How are you doing today?";

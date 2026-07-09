@@ -29,9 +29,7 @@
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.Natively",
       "permissions": [
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -52,8 +50,7 @@
           "androidCollapsedTitle": "Resolve Within",
           "iosDisplayInForeground": true
         }
-      ],
-      "expo-audio"
+      ]
     ],
     "scheme": "resolvewithin",
     "experiments": {
@@ -61,10 +58,7 @@
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev",
-      "eas": {
-        "projectId": "1ab9b6ed-f00e-494c-813d-4b9d0d1e998f"
-      }
+      "backendUrl": "https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev"
     }
   }
 }

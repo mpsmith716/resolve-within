@@ -160,25 +160,6 @@ export const dailyMessages = pgTable("daily_messages", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Donations
-export const donations = pgTable("donations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-  amount: integer("amount").notNull(), // in cents
-  tier: text("tier", { enum: ["champion", "ally", "friend"] }).notNull(),
-  isRecurring: boolean("is_recurring").default(false),
-  isAnonymous: boolean("is_anonymous").default(false),
-  stripePaymentId: text("stripe_payment_id").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const donationsRelations = relations(donations, ({ one }) => ({
-  user: one(user, {
-    fields: [donations.userId],
-    references: [user.id],
-  }),
-}));
-
 // Admin Actions
 export const adminActions = pgTable("admin_actions", {
   id: uuid("id").primaryKey().defaultRandom(),

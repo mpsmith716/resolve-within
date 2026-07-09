@@ -18,7 +18,6 @@ import { getSafeGradient, getSafeString } from '@/constants/SafeDefaults';
 import { safeAnimateOpacity, safeAnimateScale, safeStartAnimation, safeResetValue } from '@/utils/safeAnimations';
 import { FontWeights } from '@/utils/fontHelpers';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useAudioPlayer } from 'expo-audio';
 
 // ─── Level system ────────────────────────────────────────────────────────────
 
@@ -32,7 +31,6 @@ interface LevelConfig {
   totalCycles: number;
   gradient: string[];
 }
-const audioSource = require('@/assets/audio/calm-breathing.mp3');
 
 // Keyed 1–5 by level number
 const LEVEL_CONFIGS: Record<number, LevelConfig> = {
@@ -144,14 +142,6 @@ const MOOD_TO_BACKEND: Record<string, string> = {
 };
 
 export default function ResetSessionScreen() {
-  const player = useAudioPlayer(audioSource);
-
-  const safePause = () => {
-    try {
-      safePause();
-    } catch {}
-  };
-
   const params = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -181,16 +171,8 @@ export default function ResetSessionScreen() {
     safeStartAnimation(safeAnimateOpacity(screenFadeAnim, 1, { duration: 600 }));
   }, [screenFadeAnim]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-  player.volume = 0.03; // VERY important (soft)
-  player.loop = true;
-}, []);
-
   // ─── closeSession ─────────────────────────────────────────────────────────
   const closeSession = useCallback(() => {
-
-    safePause();
-
     console.log('[Session] closeSession called');
     // Stop any running animations/timers immediately
     isActiveRef.current = false;
@@ -230,12 +212,6 @@ export default function ResetSessionScreen() {
     });
     return () => sub.remove();
   }, [closeSession]);
-
-  useEffect(() => {
-  return () => {
-    safePause();
-  };
-}, []);
 
   // ─── Breathing cycle engine ───────────────────────────────────────────────
   const stopAnimations = useCallback(() => {
@@ -319,9 +295,6 @@ export default function ResetSessionScreen() {
   const handleStartStop = () => {
     if (isActive) {
       console.log('[Session] user stopped session after', cycleCount, 'cycles');
-     
-     safePause();
-
       isActiveRef.current = false;
       stopAnimations();
       setIsActive(false);
@@ -332,9 +305,6 @@ export default function ResetSessionScreen() {
       }
     } else {
       console.log('[Session] user started session, level:', config.level, config.title);
-      
-      player.play();
-
       setSessionComplete(false);
       setCycleCount(0);
       setPhase('inhale');

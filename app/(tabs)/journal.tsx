@@ -47,7 +47,6 @@ const MOOD_EMOJI: Record<string, string> = {
   heavy: '💔',
   light: '✨',
 };
-
 export default function JournalScreen() {
   const { user, loading: authLoading } = useAuth();
 

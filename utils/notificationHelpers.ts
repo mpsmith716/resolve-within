@@ -12,7 +12,7 @@ export const isExpoGo = Constants.appOwnership === 'expo';
  * A top-level import crashes on Android Expo Go (SDK 53+).
  */
 function getNotifications() {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
   return require('expo-notifications') as typeof import('expo-notifications');
 }
 

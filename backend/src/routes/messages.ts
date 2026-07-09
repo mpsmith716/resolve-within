@@ -8,16 +8,20 @@ interface MessagesQuerystring {
   limit?: number;
 }
 
+// Type assertion for app.auth (available after app.withAuth() is called)
+type AppWithAuth = App & { auth: any };
+
 export function registerMessagesRoutes(app: App) {
   const requireAuth = app.requireAuth();
   const db = app.db;
+  const appWithAuth = app as AppWithAuth;
 
-  // GET /api/messages/daily - Get today's message based on user preferences
+  // GET /api/messages/daily - Get today's message (public endpoint, optionally filtered by user preferences)
   app.fastify.get(
     "/api/messages/daily",
     {
       schema: {
-        description: "Get today's message based on user preferences",
+        description: "Get today's message (public endpoint, optionally filtered by user preferences if authenticated)",
         tags: ["messages"],
         response: {
           200: {
@@ -37,21 +41,7 @@ export function registerMessagesRoutes(app: App) {
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const session = await requireAuth(request, reply);
-      if (!session) return;
-
-      app.logger.info({ userId: session.user.id }, "Fetching daily message");
-
-      // Get user preferences
-      const [userProfile] = await db.select().from(user).where(eq(user.id, session.user.id));
-
-      if (!userProfile) {
-        app.logger.error({ userId: session.user.id }, "User not found");
-        reply.code(404);
-        return { error: "User not found" };
-      }
-
-      const messageStreams = userProfile.messageStreams || ["mental_health"];
+      app.logger.info({}, "Fetching daily message");
 
       // Get today's date (as a Date object representing 00:00 UTC)
       const now = new Date();
@@ -63,11 +53,39 @@ export function registerMessagesRoutes(app: App) {
         .from(dailyMessages)
         .where(eq(dailyMessages.date, todayDate));
 
-      // Filter by user's message streams
-      const availableMessages = messages.filter((m) => (messageStreams as any[]).includes(m.stream));
+      if (messages.length === 0) {
+        app.logger.warn({ date: todayDate }, "No messages found for today");
+        reply.code(404);
+        return { error: "No message available for today" };
+      }
+
+      // Try to get session for filtering by user preferences
+      const headers = new Headers();
+      Object.entries(request.headers).forEach(([key, value]) => {
+        if (value) {
+          headers.append(key, Array.isArray(value) ? value[0] : value);
+        }
+      });
+
+      let availableMessages = messages;
+      try {
+        const session = await appWithAuth.auth.api.getSession({ headers });
+        if (session?.user?.id) {
+          app.logger.info({ userId: session.user.id }, "Fetching daily message for authenticated user");
+          const [userProfile] = await db.select().from(user).where(eq(user.id, session.user.id));
+          if (userProfile?.messageStreams) {
+            const messageStreams = userProfile.messageStreams as any[];
+            availableMessages = messages.filter((m) => messageStreams.includes(m.stream));
+            app.logger.info({ userId: session.user.id, streamCount: availableMessages.length }, "Filtered messages by user streams");
+          }
+        }
+      } catch {
+        // Not authenticated, return from all available messages
+        app.logger.debug({}, "No authentication, returning from all available messages");
+      }
 
       if (availableMessages.length === 0) {
-        app.logger.warn({ userId: session.user.id, date: todayDate }, "No messages found for user streams");
+        app.logger.warn({ date: todayDate }, "No messages found matching criteria");
         reply.code(404);
         return { error: "No message available for today" };
       }

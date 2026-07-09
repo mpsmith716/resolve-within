@@ -348,13 +348,13 @@ describe("API Integration Tests", () => {
   });
 
   test("Get spotlight winner", async () => {
-    const res = await authenticatedApi("/api/spotlight/winner", authToken);
+    const res = await api("/api/spotlight/winner");
     await expectStatus(res, 200, 404);
   });
 
   // ============ Messages Tests ============
   test("Get daily message", async () => {
-    const res = await authenticatedApi("/api/messages/daily", authToken);
+    const res = await api("/api/messages/daily");
     await expectStatus(res, 200, 404);
   });
 
@@ -385,68 +385,6 @@ describe("API Integration Tests", () => {
     expect(typeof data.journalEntries).toBe("number");
     expect(data.mostCommonMood).toBeDefined();
     expect(typeof data.mostCommonMood).toBe("string");
-  });
-
-  // ============ Donations Tests ============
-  test("Create payment intent for donation", async () => {
-    const res = await authenticatedApi("/api/donations/create-payment-intent", authToken, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: 25,
-        tier: "friend",
-        isRecurring: false,
-        isAnonymous: true,
-      }),
-    });
-    await expectStatus(res, 200, 400);
-  });
-
-  test("Create payment intent - champion tier", async () => {
-    const res = await authenticatedApi("/api/donations/create-payment-intent", authToken, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: 500,
-        tier: "champion",
-      }),
-    });
-    await expectStatus(res, 200, 400);
-  });
-
-  test("Create payment intent - missing required fields", async () => {
-    const res = await authenticatedApi("/api/donations/create-payment-intent", authToken, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: 50 }),
-    });
-    await expectStatus(res, 400);
-  });
-
-  test("Confirm donation payment", async () => {
-    const res = await authenticatedApi("/api/donations/confirm", authToken, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paymentIntentId: "pi_test_invalid_12345",
-        tier: "ally",
-      }),
-    });
-    await expectStatus(res, 200, 400);
-  });
-
-  test("Get donation history", async () => {
-    const res = await authenticatedApi("/api/donations/history", authToken);
-    await expectStatus(res, 200);
-    const data = await res.json();
-    expect(Array.isArray(data)).toBe(true);
-  });
-
-  test("Get donation history with pagination", async () => {
-    const res = await authenticatedApi("/api/donations/history?limit=10&offset=5", authToken);
-    await expectStatus(res, 200);
-    const data = await res.json();
-    expect(Array.isArray(data)).toBe(true);
   });
 
   // ============ Breathing Sessions Tests ============
@@ -534,6 +472,28 @@ describe("API Integration Tests", () => {
     if (data.resources.length > 0) {
       expect(data.resources[0].region).toBeDefined();
       expect(data.resources[0].name).toBeDefined();
+    }
+  });
+
+  // ============ Setup Tests ============
+  test("Create reviewer account (one-time setup)", async () => {
+    const res = await api("/api/setup/create-reviewer", {
+      method: "POST",
+    });
+    await expectStatus(res, 200, 400, 500);
+    const data = await res.json();
+
+    // If successful (200), expect created and optional reason
+    if (res.status === 200) {
+      expect(data.created).toBeDefined();
+      expect(typeof data.created).toBe("boolean");
+      if (data.reason) {
+        expect(typeof data.reason).toBe("string");
+      }
+    } else {
+      // If error (400 or 500), expect error message
+      expect(data.error).toBeDefined();
+      expect(typeof data.error).toBe("string");
     }
   });
 
@@ -676,11 +636,6 @@ describe("API Integration Tests", () => {
     await expectStatus(res, 401);
   });
 
-  test("Donations - 401 without authentication", async () => {
-    const res = await api("/api/donations/history");
-    await expectStatus(res, 401);
-  });
-
   test("Spotlight - 401 without authentication", async () => {
     const res = await api("/api/spotlight/current");
     await expectStatus(res, 401);
@@ -768,25 +723,6 @@ describe("API Integration Tests", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ postId: "00000000-0000-0000-0000-000000000000" }),
-    });
-    await expectStatus(res, 400);
-  });
-
-  // ============ Donations - Negative Cases ============
-  test("Confirm donation - missing required paymentIntentId", async () => {
-    const res = await authenticatedApi("/api/donations/confirm", authToken, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tier: "ally" }),
-    });
-    await expectStatus(res, 400);
-  });
-
-  test("Confirm donation - missing required tier", async () => {
-    const res = await authenticatedApi("/api/donations/confirm", authToken, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentIntentId: "pi_test" }),
     });
     await expectStatus(res, 400);
   });
