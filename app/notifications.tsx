@@ -24,7 +24,7 @@ import {
   cancelAllScheduledNotifications,
 } from '@/utils/notificationHelpers';
 
-const STORAGE_KEY = '@resolve_within_notifications';
+const STORAGE_KEY = 'resolve_within_notifications';
 
 interface NotificationSettings {
   pushNotifications: boolean;

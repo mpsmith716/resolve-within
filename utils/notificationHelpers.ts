@@ -94,10 +94,10 @@ export async function scheduleNotification(options: {
         sound: true,
       },
       trigger: {
-        hour: options.hour,
-        minute: options.minute,
-        repeats: true,
-      },
+       type: 'daily',
+       hour: options.hour,
+       minute: options.minute,
+    },
     });
     console.log(`✅ Notification scheduled with ID: ${id}`);
     return id;
