@@ -180,7 +180,7 @@ export default function HomeScreen() {
   const [savingPost, setSavingPost] = useState(false);
   const [interactingPost, setInteractingPost] = useState<string | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
-
+const [selectedReportPostId, setSelectedReportPostId] = useState<string | null>(null);
   const safeGradient = getSafeGradient([colors.background, '#0a0e1a', colors.background]);
 
   useEffect(() => {
@@ -690,10 +690,11 @@ export default function HomeScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.postActionBtn}
-                        onPress={() => {
-                          console.log('[Home] Tapped flag on post:', post.id, '— opening ReportModal');
-                          setReportModalVisible(true);
-                        }}
+                       onPress={() => {
+                      console.log('[Home] Tapped flag on post:', post.id, '— opening ReportModal');
+                      setSelectedReportPostId(post.id);
+                      setReportModalVisible(true);
+                      }}
                         disabled={interactingPost === post.id}
                       >
                         <Text style={styles.postActionText}>{flagText}</Text>
@@ -715,10 +716,16 @@ export default function HomeScreen() {
 
   return (
     <LinearGradient colors={safeGradient} style={styles.container}>
-      <ReportModal
-        visible={reportModalVisible}
-        onClose={() => setReportModalVisible(false)}
-      />
+     {selectedReportPostId && (
+  <ReportModal
+    visible={reportModalVisible}
+    postId={selectedReportPostId}
+    onClose={() => {
+      setReportModalVisible(false);
+      setSelectedReportPostId(null);
+    }}
+  />
+)}
       <View style={[styles.tabBar, { paddingTop: insets.top + 8 }]}>
         {(['home', 'journal', 'community'] as ActiveTab[]).map(tab => {
           const tabLabelText = tab === 'home' ? homeTabLabel : tab === 'journal' ? journalTabLabel : communityTabLabel;

@@ -58,7 +58,9 @@
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev"
+      "extra": {
+  "backendUrl": "http://192.168.12.93:3001"
+      }
     }
   }
 }

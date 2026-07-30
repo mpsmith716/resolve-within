@@ -1,4 +1,5 @@
 import { createApplication } from "@specific-dev/framework";
+import { expo } from "@better-auth/expo";
 import * as appSchema from './db/schema/schema.js';
 import * as authSchema from './db/schema/auth-schema.js';
 import { eq } from 'drizzle-orm';
@@ -16,6 +17,7 @@ import { registerFavoritesRoutes } from './routes/favorites.js';
 import { registerCrisisRoutes } from './routes/crisis.js';
 import { registerProgressRoutes } from './routes/progress.js';
 import { registerSetupRoutes } from './routes/setup.js';
+import { registerReportRoutes } from './routes/reports.js';
 
 // Combine schemas
 const schema = { ...appSchema, ...authSchema };
@@ -30,7 +32,16 @@ export type App = typeof app;
 type AppWithAuth = App & { auth: any };
 
 // Enable authentication with Better Auth
-app.withAuth();
+app.withAuth({
+  trustedOrigins: [
+    "resolvewithin://",
+    "resolvewithin://*",
+    "exp://",
+    "exp://**",
+    "exp://192.168.*.*:*/**",
+  ],
+  plugins: [expo()],
+});
 
 // Seed reviewer account on startup
 {
@@ -72,6 +83,6 @@ registerFavoritesRoutes(app);
 registerCrisisRoutes(app);
 registerProgressRoutes(app);
 registerSetupRoutes(app);
-
+registerReportRoutes(app);
 await app.run();
 app.logger.info('Application running');

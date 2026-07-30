@@ -122,6 +122,7 @@ export default function HomeScreen() {
   const [dailyMessage, setDailyMessage] = useState<DailyMessageData>(getTodayMessage());
   const [dailyReset] = useState<DailyResetData>(getTodayReset());
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [selectedReportPostId, setSelectedReportPostId] = useState<string | null>(null);
 
   const messageFadeAnim = useRef(new Animated.Value(0)).current;
   const contentFadeAnim = useRef(new Animated.Value(1)).current;
@@ -186,10 +187,16 @@ export default function HomeScreen() {
   return (
     <LinearGradient colors={safeGradient} style={styles.container}>
       {/* 
-<ReportModal
-  visible={reportModalVisible}
-  onClose={() => setReportModalVisible(false)}
-/>
+{selectedReportPostId && (
+  <ReportModal
+    visible={reportModalVisible}
+    postId={selectedReportPostId}
+    onClose={() => {
+      setReportModalVisible(false);
+      setSelectedReportPostId(null);
+    }}
+  />
+)}
 */}
 
       <Animated.View style={{ flex: 1, opacity: contentFadeAnim }}>

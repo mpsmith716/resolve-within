@@ -43,6 +43,39 @@ export const communityPosts = pgTable("community_posts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Reported Community Posts
+export const reportedPosts = pgTable("reported_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+
+  postId: uuid("post_id")
+    .notNull()
+    .references(() => communityPosts.id, { onDelete: "cascade" }),
+
+  reporterUserId: text("reporter_user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+
+  reason: text("reason").notNull().default("safety_concern"),
+
+  notes: text("notes"),
+
+  status: text("status", {
+    enum: ["pending", "reviewed", "dismissed", "action_taken"],
+  })
+    .notNull()
+    .default("pending"),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+
+  reviewedBy: text("reviewed_by").references(() => user.id, {
+    onDelete: "set null",
+  }),
+});
+
 export const communityPostsRelations = relations(communityPosts, ({ one, many }) => ({
   author: one(user, {
     fields: [communityPosts.authorId],

@@ -18,10 +18,15 @@ import ReportSafetyForm from '@/components/ReportSafetyForm';
 
 interface ReportModalProps {
   visible: boolean;
+  postId: string;
   onClose: () => void;
 }
 
-export default function ReportModal({ visible, onClose }: ReportModalProps) {
+export default function ReportModal({
+  visible,
+  postId,
+  onClose,
+}: ReportModalProps) {
   const insets = useSafeAreaInsets();
   const [showContentForm, setShowContentForm] = useState(false);
   const [showSafetyForm, setShowSafetyForm] = useState(false);
@@ -149,20 +154,21 @@ export default function ReportModal({ visible, onClose }: ReportModalProps) {
           </View>
         </View>
       </View>
-      <ReportContentForm
-        visible={showContentForm}
-        onClose={() => {
-          setShowContentForm(false);
-          onClose();
-        }}
-      />
-      <ReportSafetyForm
-        visible={showSafetyForm}
-        onClose={() => {
-          setShowSafetyForm(false);
-          onClose();
-        }}
-      />
+   <ReportContentForm
+  visible={showContentForm}
+  postId={postId}
+  onClose={() => {
+    setShowContentForm(false);
+  }}
+/>
+    <ReportSafetyForm
+  visible={showSafetyForm}
+  postId={postId}
+  onClose={() => {
+    setShowSafetyForm(false);
+    onClose();
+  }}
+/>
     </Modal>
   );
 }

@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  Linking,
   ScrollView,
   KeyboardAvoidingView,
 } from 'react-native';
@@ -16,19 +15,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors } from '@/styles/commonStyles';
 import { FontWeights } from '@/utils/fontHelpers';
+import { authenticatedPost } from '@/utils/api';
 
 interface ReportSafetyFormProps {
   visible: boolean;
+  postId: string;
   onClose: () => void;
 }
 
-export default function ReportSafetyForm({ visible, onClose }: ReportSafetyFormProps) {
+export default function ReportSafetyForm({
+  visible,
+  postId,
+  onClose,
+}: ReportSafetyFormProps) {
   const insets = useSafeAreaInsets();
   const [details, setDetails] = useState('');
   const [username, setUsername] = useState('');
   const [showError, setShowError] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form state when modal opens
   useEffect(() => {
@@ -38,16 +44,19 @@ export default function ReportSafetyForm({ visible, onClose }: ReportSafetyFormP
       setShowError(false);
       setSubmitted(false);
       setSubmitError(false);
+      setIsSubmitting(false);
     }
   }, [visible]);
 
   // Auto-dismiss after success
   useEffect(() => {
     if (!submitted) return;
+
     const timer = setTimeout(() => {
       console.log('ReportSafetyForm: Auto-dismissing after successful submission');
       onClose();
     }, 2500);
+
     return () => clearTimeout(timer);
   }, [submitted, onClose]);
 
@@ -67,44 +76,30 @@ export default function ReportSafetyForm({ visible, onClose }: ReportSafetyFormP
 
     setShowError(false);
     setSubmitError(false);
-
-    const now = new Date();
-    const dateString = now.toLocaleString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short',
-    });
-
-    const usernameLine = username.trim()
-      ? `Username: ${username.trim()}\n`
-      : '';
-
-    const body = `Concern Details:\n${details.trim()}\n\n${usernameLine}Submitted: ${dateString}`;
-
-    const mailtoUrl =
-      `mailto:support@theresolvewithinproject.org` +
-      `?subject=${encodeURIComponent('Safety Concern Report')}` +
-      `&body=${encodeURIComponent(body)}`;
+    setIsSubmitting(true);
 
     try {
-      console.log('ReportSafetyForm: Checking mailto support');
-      const supported = await Linking.canOpenURL(mailtoUrl);
-      if (!supported) throw new Error('mailto not supported');
-      console.log('ReportSafetyForm: Opening mailto URL for safety concern report');
-      await Linking.openURL(mailtoUrl);
+      await authenticatedPost('/api/reports', {
+        postId,
+        reason: 'safety_concern',
+        notes: username.trim()
+          ? `${details.trim()}\n\nReported username: ${username.trim()}`
+          : details.trim(),
+      });
+
+      console.log('ReportSafetyForm: Report submitted successfully');
       setSubmitted(true);
-    } catch (e) {
-      console.log('ReportSafetyForm: Failed to open mailto URL:', e);
+    } catch (error) {
+      console.log('ReportSafetyForm: Failed to submit report:', error);
       setSubmitError(true);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDetailsChange = (text: string) => {
     setDetails(text);
+
     if (showError && text.trim()) {
       setShowError(false);
     }
@@ -229,12 +224,18 @@ export default function ReportSafetyForm({ visible, onClose }: ReportSafetyFormP
 
               {/* Submit button */}
               <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleSubmit}
-                activeOpacity={0.8}
+              style={[
+               styles.submitButton,
+              isSubmitting && styles.submitButtonDisabled,
+              ]}
+              onPress={handleSubmit}
+               activeOpacity={0.8}
+               disabled={isSubmitting}
               >
-                <Text style={styles.submitButtonText}>Submit Safety Report</Text>
-              </TouchableOpacity>
+               <Text style={styles.submitButtonText}>
+             {isSubmitting ? 'Submitting...' : 'Submit Safety Report'}
+             </Text>
+            </TouchableOpacity>
             </ScrollView>
           )}
         </View>
@@ -407,11 +408,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textAlign: 'center',
   },
-  successText: {
-    fontSize: 16,
-    fontWeight: FontWeights.regular,
-    color: colors.textSecondary,
-    lineHeight: 24,
-    textAlign: 'center',
-  },
+successText: {
+  fontSize: 16,
+  fontWeight: FontWeights.regular,
+  color: colors.textSecondary,
+  lineHeight: 24,
+  textAlign: 'center',
+},
+
+submitButtonDisabled: {
+  opacity: 0.6,
+},
 });

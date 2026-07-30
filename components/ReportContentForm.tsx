@@ -1,36 +1,43 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
-  View,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Platform,
-  Linking,
-  ScrollView,
-  KeyboardAvoidingView,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors } from '@/styles/commonStyles';
+import { authenticatedPost } from '@/utils/api';
 import { FontWeights } from '@/utils/fontHelpers';
 
 interface ReportContentFormProps {
   visible: boolean;
+  postId: string;
   onClose: () => void;
 }
 
-export default function ReportContentForm({ visible, onClose }: ReportContentFormProps) {
+export default function ReportContentForm({
+  visible,
+  postId,
+  onClose,
+}: ReportContentFormProps) {
   const insets = useSafeAreaInsets();
+
   const [details, setDetails] = useState('');
   const [username, setUsername] = useState('');
   const [showError, setShowError] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset form state when modal opens
+  // Reset the form whenever it opens.
   useEffect(() => {
     if (visible) {
       setDetails('');
@@ -38,20 +45,27 @@ export default function ReportContentForm({ visible, onClose }: ReportContentFor
       setShowError(false);
       setSubmitted(false);
       setSubmitError(false);
+      setIsSubmitting(false);
     }
   }, [visible]);
 
-  // Auto-dismiss after success
+  // Close the form shortly after a successful report.
   useEffect(() => {
     if (!submitted) return;
+
     const timer = setTimeout(() => {
-      console.log('ReportContentForm: Auto-dismissing after successful submission');
+      console.log(
+        'ReportContentForm: Auto-dismissing after successful submission'
+      );
       onClose();
     }, 2500);
+
     return () => clearTimeout(timer);
   }, [submitted, onClose]);
 
   const handleClose = () => {
+    if (isSubmitting) return;
+
     console.log('ReportContentForm: User dismissed report content form');
     onClose();
   };
@@ -60,55 +74,52 @@ export default function ReportContentForm({ visible, onClose }: ReportContentFor
     console.log('ReportContentForm: Submit button pressed');
 
     if (!details.trim()) {
-      console.log('ReportContentForm: Validation failed — details field is empty');
+      console.log(
+        'ReportContentForm: Validation failed — details field is empty'
+      );
       setShowError(true);
       return;
     }
 
     setShowError(false);
     setSubmitError(false);
-
-    const now = new Date();
-    const dateString = now.toLocaleString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short',
-    });
-
-    const usernameLine = username.trim()
-      ? `Reported Username: ${username.trim()}\n`
-      : '';
-
-    const body = `Details:\n${details.trim()}\n\n${usernameLine}Submitted: ${dateString}`;
-
-    const mailtoUrl =
-      `mailto:support@theresolvewithinproject.org` +
-      `?subject=${encodeURIComponent('Content/User Report')}` +
-      `&body=${encodeURIComponent(body)}`;
+    setIsSubmitting(true);
 
     try {
-      console.log('ReportContentForm: Checking mailto support');
-      const supported = await Linking.canOpenURL(mailtoUrl);
-      if (!supported) throw new Error('mailto not supported');
-      console.log('ReportContentForm: Opening mailto URL for content/user report');
-      await Linking.openURL(mailtoUrl);
-      setSubmitted(true);
-    } catch (e) {
-      console.log('ReportContentForm: Failed to open mailto URL:', e);
-      setSubmitError(true);
-    }
-  };
+  await authenticatedPost('/api/reports', {
+    postId,
+    reason: 'content_or_user_report',
+    notes: username.trim()
+      ? `${details.trim()}\n\nReported username: ${username.trim()}`
+      : details.trim(),
+  });
 
-  const handleDetailsChange = (text: string) => {
-    setDetails(text);
-    if (showError && text.trim()) {
-      setShowError(false);
-    }
+  console.log('ReportContentForm: Report submitted successfully');
+  setSubmitted(true);
+} catch (error: unknown) {
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : JSON.stringify(error);
+
+  console.log(
+    `ReportContentForm: Failed to submit report: ${errorMessage}`
+  );
+
+  setSubmitError(true);
+} finally {
+  setIsSubmitting(false);
+}
   };
+  const handleDetailsChange = (text: string) => {
+  setDetails(text);
+
+  if (showError && text.trim()) {
+    setShowError(false);
+  }
+};
 
   const topPad = insets.top > 0 ? insets.top : 44;
   const bottomPad = insets.bottom > 0 ? insets.bottom : 24;
@@ -126,13 +137,14 @@ export default function ReportContentForm({ visible, onClose }: ReportContentFor
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={[styles.container, { paddingTop: topPad }]}>
-          {/* Header row */}
           <View style={styles.headerRow}>
             <Text style={styles.headerTitle}>Report Content or User</Text>
+
             <TouchableOpacity
               style={styles.closeButton}
               onPress={handleClose}
               activeOpacity={0.7}
+              disabled={isSubmitting}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <IconSymbol
@@ -144,11 +156,9 @@ export default function ReportContentForm({ visible, onClose }: ReportContentFor
             </TouchableOpacity>
           </View>
 
-          {/* Divider */}
           <View style={styles.divider} />
 
           {submitted ? (
-            /* ── Success state ── */
             <View style={styles.successContainer}>
               <View style={styles.successIconWrap}>
                 <IconSymbol
@@ -158,16 +168,20 @@ export default function ReportContentForm({ visible, onClose }: ReportContentFor
                   color={colors.accent}
                 />
               </View>
+
               <Text style={styles.successTitle}>Report Submitted</Text>
+
               <Text style={styles.successText}>
                 Thank you. Your report has been submitted and will be reviewed.
               </Text>
             </View>
           ) : (
-            /* ── Form state ── */
             <ScrollView
               style={styles.flex}
-              contentContainerStyle={[styles.formContent, { paddingBottom: bottomPad + 16 }]}
+              contentContainerStyle={[
+                styles.formContent,
+                { paddingBottom: bottomPad + 16 },
+              ]}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
@@ -175,12 +189,12 @@ export default function ReportContentForm({ visible, onClose }: ReportContentFor
                 Report spam, harassment, inappropriate content, or misuse.
               </Text>
 
-              {/* Details field */}
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>
                   Details
                   <Text style={styles.requiredMark}> *</Text>
                 </Text>
+
                 <TextInput
                   style={[
                     styles.textArea,
@@ -195,7 +209,9 @@ export default function ReportContentForm({ visible, onClose }: ReportContentFor
                   textAlignVertical="top"
                   returnKeyType="default"
                   blurOnSubmit={false}
+                  editable={!isSubmitting}
                 />
+
                 {showError && (
                   <Text style={styles.errorText}>
                     Please share a few details before submitting.
@@ -203,9 +219,9 @@ export default function ReportContentForm({ visible, onClose }: ReportContentFor
                 )}
               </View>
 
-              {/* Username field */}
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>Username</Text>
+
                 <TextInput
                   style={styles.textInput}
                   placeholder="Username (optional)"
@@ -215,25 +231,34 @@ export default function ReportContentForm({ visible, onClose }: ReportContentFor
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="done"
+                  editable={!isSubmitting}
                 />
               </View>
 
               {submitError && (
                 <View style={styles.submitErrorBanner}>
-                  <Text style={styles.submitErrorTitle}>Something went wrong</Text>
+                  <Text style={styles.submitErrorTitle}>
+                    Something went wrong
+                  </Text>
+
                   <Text style={styles.submitErrorText}>
                     We couldn't submit your report right now. Please try again.
                   </Text>
                 </View>
               )}
 
-              {/* Submit button */}
               <TouchableOpacity
-                style={styles.submitButton}
+                style={[
+                  styles.submitButton,
+                  isSubmitting && styles.submitButtonDisabled,
+                ]}
                 onPress={handleSubmit}
                 activeOpacity={0.8}
+                disabled={isSubmitting}
               >
-                <Text style={styles.submitButtonText}>Submit Report</Text>
+                <Text style={styles.submitButtonText}>
+                  {isSubmitting ? 'Submitting...' : 'Submit Report'}
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           )}
@@ -247,17 +272,20 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+
   container: {
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: 20,
   },
+
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 8,
     paddingBottom: 16,
   },
+
   headerTitle: {
     flex: 1,
     fontSize: 20,
@@ -266,6 +294,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     paddingRight: 12,
   },
+
   closeButton: {
     width: 32,
     height: 32,
@@ -274,14 +303,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   divider: {
     height: 1,
     backgroundColor: colors.border,
     marginBottom: 24,
   },
+
   formContent: {
     paddingTop: 4,
   },
+
   description: {
     fontSize: 15,
     fontWeight: FontWeights.regular,
@@ -289,9 +321,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 28,
   },
+
   fieldBlock: {
     marginBottom: 20,
   },
+
   fieldLabel: {
     fontSize: 14,
     fontWeight: FontWeights.semibold,
@@ -299,10 +333,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     letterSpacing: 0.2,
   },
+
   requiredMark: {
     color: colors.accent,
     fontWeight: FontWeights.bold,
   },
+
   textArea: {
     backgroundColor: colors.card,
     borderRadius: 12,
@@ -317,9 +353,11 @@ const styles = StyleSheet.create({
     minHeight: 112,
     lineHeight: 22,
   },
+
   textAreaError: {
     borderColor: '#E05252',
   },
+
   textInput: {
     backgroundColor: colors.card,
     borderRadius: 12,
@@ -332,6 +370,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     height: 52,
   },
+
   errorText: {
     fontSize: 13,
     fontWeight: FontWeights.medium,
@@ -339,6 +378,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 18,
   },
+
   submitButton: {
     backgroundColor: colors.accent,
     borderRadius: 14,
@@ -358,13 +398,18 @@ const styles = StyleSheet.create({
       },
     }),
   },
+
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+
   submitButtonText: {
     fontSize: 16,
     fontWeight: FontWeights.bold,
     color: colors.background,
     letterSpacing: 0.4,
   },
-  // Submit error banner
+
   submitErrorBanner: {
     backgroundColor: '#FFF4ED',
     borderRadius: 10,
@@ -375,6 +420,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
   },
+
   submitErrorTitle: {
     fontSize: 13,
     fontWeight: FontWeights.semibold,
@@ -382,13 +428,14 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     lineHeight: 18,
   },
+
   submitErrorText: {
     fontSize: 13,
     fontWeight: FontWeights.regular,
     color: '#92400E',
     lineHeight: 18,
   },
-  // Success state
+
   successContainer: {
     flex: 1,
     alignItems: 'center',
@@ -396,9 +443,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 60,
   },
+
   successIconWrap: {
     marginBottom: 20,
   },
+
   successTitle: {
     fontSize: 24,
     fontWeight: FontWeights.bold,
@@ -407,6 +456,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textAlign: 'center',
   },
+
   successText: {
     fontSize: 16,
     fontWeight: FontWeights.regular,
