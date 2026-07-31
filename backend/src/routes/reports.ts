@@ -1,6 +1,7 @@
 import type { App } from "../index.js";
 import { communityPosts, reportedPosts } from "../db/schema/schema.js";
-import { eq } from "drizzle-orm";
+import { user } from "../db/schema/auth-schema.js";
+import { desc, eq } from "drizzle-orm";
 import type { FastifyRequest, FastifyReply } from "fastify";
 
 interface CreateReportBody {
@@ -10,7 +11,6 @@ interface CreateReportBody {
 }
 
 export function registerReportRoutes(app: App) {
-
   const requireAuth = app.requireAuth();
   const db = app.db;
 
@@ -67,14 +67,19 @@ export function registerReportRoutes(app: App) {
       if (!session) return;
 
       const post = await db
-        .select({ id: communityPosts.id })
+        .select({
+          id: communityPosts.id,
+        })
         .from(communityPosts)
         .where(eq(communityPosts.id, request.body.postId))
         .limit(1);
 
       if (!post.length) {
         reply.code(404);
-        return { error: "Post not found" };
+
+        return {
+          error: "Post not found",
+        };
       }
 
       const [report] = await db
@@ -85,7 +90,9 @@ export function registerReportRoutes(app: App) {
           reason: request.body.reason ?? "safety_concern",
           notes: request.body.notes?.trim() || null,
         })
-        .returning({ id: reportedPosts.id });
+        .returning({
+          id: reportedPosts.id,
+        });
 
       app.logger.info(
         {
@@ -101,6 +108,130 @@ export function registerReportRoutes(app: App) {
       return {
         success: true,
         reportId: report.id,
+      };
+    }
+  );
+
+  app.fastify.get(
+    "/api/admin/reports",
+    {
+      schema: {
+        description: "Get reported community posts for administrators",
+        tags: ["admin", "reports"],
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              reports: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: {
+                      type: "string",
+                      format: "uuid",
+                    },
+                    postId: {
+                      type: "string",
+                      format: "uuid",
+                    },
+                    reporterUserId: {
+                      type: "string",
+                    },
+                    reason: {
+                      type: "string",
+                    },
+                    notes: {
+                      anyOf: [
+                        {
+                          type: "string",
+                        },
+                        {
+                          type: "null",
+                        },
+                      ],
+                    },
+                    status: {
+                      type: "string",
+                    },
+                    createdAt: {
+                      type: "string",
+                    },
+                    postContent: {
+                      type: "string",
+                    },
+                    postAuthorName: {
+                      type: "string",
+                    },
+                    postIsAnonymous: {
+                      type: "boolean",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            type: "object",
+            properties: {
+              error: {
+                type: "string",
+              },
+            },
+          },
+          403: {
+            type: "object",
+            properties: {
+              error: {
+                type: "string",
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const session = await requireAuth(request, reply);
+      if (!session) return;
+
+      const [currentUser] = await db
+        .select({
+          isAdmin: user.isAdmin,
+        })
+        .from(user)
+        .where(eq(user.id, session.user.id))
+        .limit(1);
+
+      if (!currentUser?.isAdmin) {
+        reply.code(403);
+
+        return {
+          error: "Administrator access required",
+        };
+      }
+
+      const reports = await db
+        .select({
+          id: reportedPosts.id,
+          postId: reportedPosts.postId,
+          reporterUserId: reportedPosts.reporterUserId,
+          reason: reportedPosts.reason,
+          notes: reportedPosts.notes,
+          status: reportedPosts.status,
+          createdAt: reportedPosts.createdAt,
+          postContent: communityPosts.content,
+          postAuthorName: communityPosts.authorName,
+          postIsAnonymous: communityPosts.isAnonymous,
+        })
+        .from(reportedPosts)
+        .innerJoin(
+          communityPosts,
+          eq(reportedPosts.postId, communityPosts.id)
+        )
+        .orderBy(desc(reportedPosts.createdAt));
+
+      return {
+        reports,
       };
     }
   );
