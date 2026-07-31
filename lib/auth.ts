@@ -4,7 +4,7 @@ import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
-const API_URL = "https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev";
+const API_URL = "https://resolve-within-backend.onrender.com";
 
 export const BEARER_TOKEN_KEY = "mental-reset_bearer_token";
 
