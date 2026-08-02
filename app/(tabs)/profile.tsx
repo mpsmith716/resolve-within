@@ -23,6 +23,7 @@ interface UserProfile {
   id: string;
   email: string;
   name: string;
+  isAdmin: boolean;
   userType: string;
   notificationTime: string;
   messageStreams: string[];
@@ -458,6 +459,35 @@ export default function ProfileScreen() {
               />
             </TouchableOpacity>
           </View>
+
+          {profile?.isAdmin && (
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Administration</Text>
+
+    <TouchableOpacity
+      style={styles.menuItem}
+      onPress={() => router.push('/admin')}
+    >
+      <IconSymbol
+        ios_icon_name="shield.fill"
+        android_material_icon_name="admin-panel-settings"
+        size={24}
+        color="#CC0000"
+      />
+
+      <Text style={styles.menuItemText}>
+        Admin Dashboard
+      </Text>
+
+      <IconSymbol
+        ios_icon_name="chevron.right"
+        android_material_icon_name="arrow-forward"
+        size={20}
+        color={colors.textSecondary}
+      />
+    </TouchableOpacity>
+  </View>
+)}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Privacy</Text>

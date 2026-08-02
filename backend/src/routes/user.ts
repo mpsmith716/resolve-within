@@ -28,6 +28,7 @@ export function registerUserRoutes(app: App) {
               id: { type: "string" },
               email: { type: "string" },
               name: { type: "string" },
+              isAdmin: { type: "boolean" },
               userType: { type: "string" },
               notificationTime: { type: "string" },
               messageStreams: {
@@ -66,6 +67,7 @@ export function registerUserRoutes(app: App) {
         id: userProfile.id,
         email: userProfile.email,
         name: userProfile.name,
+        isAdmin: userProfile.isAdmin,
         userType: userProfile.userType,
         notificationTime: userProfile.notificationTime,
         messageStreams: userProfile.messageStreams,
