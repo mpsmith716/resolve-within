@@ -109,24 +109,20 @@ const flushLogs = async () => {
     try {
       fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(log),
-      }).catch((e) => {
-        // Log fetch errors only once to avoid spam
-        if (!fetchErrorLogged) {
-          fetchErrorLogged = true;
-          // Use a different method to avoid recursion - write directly without going through our intercept
-          if (typeof window !== 'undefined' && window.console) {
-            (window.console as any).__proto__.log.call(console, '[Newly] Fetch error (will not repeat):', e.message || e);
-          }
-        }
+      }).catch(() => {
+        // Resolve Within no longer uses the Newly logging server.
+        // Silently ignore failed development-log uploads.
+        fetchErrorLogged = true;
       });
-    } catch (e) {
-      // Silently ignore sync errors
+    } catch {
+      // Silently ignore synchronous logging errors.
     }
   }
 };
-
 // Queue a log to be sent
 const queueLog = (level: string, message: string, source: string = '') => {
   const logKey = `${level}:${message}`;
