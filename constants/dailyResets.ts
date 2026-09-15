@@ -7,6 +7,8 @@ export interface DailyResetData {
   description: string;
   type: 'breathing' | 'grounding' | 'reflection' | 'relaxation';
   targetMood?: string;
+  /** Optional emoji shown on home reset card */
+  icon?: string;
 }
 
 const DAILY_RESETS: DailyResetData[] = [
@@ -16,12 +18,14 @@ const DAILY_RESETS: DailyResetData[] = [
     description: 'Slow breathing to calm your nervous system and regain control.',
     type: 'breathing',
     targetMood: 'calm',
+    icon: '🧘',
   },
   {
     id: 'reset-grounding-5-4-3-2-1',
     title: 'Grounding Exercise',
     description: 'Use your senses to reconnect with the present moment.',
     type: 'grounding',
+    icon: '🌍',
   },
   {
     id: 'reset-breathing-energized',
@@ -29,15 +33,18 @@ const DAILY_RESETS: DailyResetData[] = [
     description: 'Quick breathing technique to boost energy and focus.',
     type: 'breathing',
     targetMood: 'energized',
+    icon: '⚡',
   },
   {
     id: 'reset-relaxation-body-scan',
     title: 'Body Relaxation Reset',
     description: 'Release tension from head to toe with guided relaxation.',
     type: 'relaxation',
+    icon: '😌',
   },
   {
     id: 'reset-reflection-gratitude',
+    icon: '🙏',
     title: 'Quick Reflection Prompt',
     description: 'Take a moment to reflect on one thing you\'re grateful for today.',
     type: 'reflection',
@@ -48,6 +55,7 @@ const DAILY_RESETS: DailyResetData[] = [
     description: 'Sharpen your concentration with intentional breathing.',
     type: 'breathing',
     targetMood: 'focused',
+    icon: '🎯',
   },
   {
     id: 'reset-grounding-box-breathing',
@@ -55,6 +63,7 @@ const DAILY_RESETS: DailyResetData[] = [
     description: 'Military-grade breathing technique for instant calm.',
     type: 'breathing',
     targetMood: 'grounded',
+    icon: '📦',
   },
 ];
 

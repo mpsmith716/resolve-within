@@ -26,5 +26,5 @@ export function useTheme(): Theme {
   }
   
   // Merge context theme with DEFAULT_THEME to ensure all properties exist
-  return getSafeTheme(themeFromContext as Partial<Theme>);
+  return getSafeTheme(themeFromContext as unknown as Partial<Theme>);
 }
