@@ -32,25 +32,25 @@ export const FALLBACK_THEME = {
 
 // Theme defaults
 export const SAFE_THEME = {
-  primary: DEFAULT_THEME.primary,
-  secondary: DEFAULT_THEME.secondary,
-  accent: DEFAULT_THEME.accent,
-  background: DEFAULT_THEME.background,
-  card: DEFAULT_THEME.card,
-  text: DEFAULT_THEME.text,
-  subtext: DEFAULT_THEME.subtext,
-  border: DEFAULT_THEME.border,
+  primary: DEFAULT_THEME.colors.primary,
+  secondary: DEFAULT_THEME.colors.accent,
+  accent: DEFAULT_THEME.colors.accent,
+  background: DEFAULT_THEME.colors.background,
+  card: DEFAULT_THEME.colors.card,
+  text: DEFAULT_THEME.colors.text,
+  subtext: DEFAULT_THEME.colors.subtext,
+  border: DEFAULT_THEME.colors.border,
 };
 
 // Gradient defaults
 export const SAFE_GRADIENTS = {
-  primary: ['#0b1020', '#121939'],
-  accent: ['#FFD700', '#FFA500'],
-  calm: ['#1a2332', '#2a3f5f'],
-  energized: ['#FF6B6B', '#FFD93D'],
-  focused: ['#4ECDC4', '#44A08D'],
-  grounded: ['#8B7355', '#6B5B4F'],
-  peaceful: ['#667EEA', '#764BA2'],
+  primary: ['#0b1020', '#121939'] as [string, string, ...string[]],
+  accent: ['#FFD700', '#FFA500'] as [string, string, ...string[]],
+  calm: ['#1a2332', '#2a3f5f'] as [string, string, ...string[]],
+  energized: ['#FF6B6B', '#FFD93D'] as [string, string, ...string[]],
+  focused: ['#4ECDC4', '#44A08D'] as [string, string, ...string[]],
+  grounded: ['#8B7355', '#6B5B4F'] as [string, string, ...string[]],
+  peaceful: ['#667EEA', '#764BA2'] as [string, string, ...string[]],
 };
 
 // Breathing session defaults
@@ -72,8 +72,10 @@ export const SAFE_DAILY_MESSAGE = {
   id: 'fallback',
   title: 'You Are Not Alone',
   message: 'Every moment is a chance to reset. Take a deep breath and know that you have the strength within you.',
+  text: 'Every moment is a chance to reset. Take a deep breath and know that you have the strength within you.',
   author: 'Resolve Within',
   category: 'resilience',
+  stream: 'resilience',
   gradient: ['#0b1020', '#121939'],
 };
 
@@ -84,6 +86,7 @@ export const SAFE_DAILY_RESET = {
   description: 'Slow breathing to calm your nervous system and regain control.',
   type: 'breathing' as const,
   targetMood: 'calm',
+  icon: '🧘',
 };
 
 // Navigation safe defaults
@@ -97,12 +100,12 @@ export const SAFE_ROUTES = {
 /**
  * Safely get a gradient, falling back to primary if invalid
  */
-export function getSafeGradient(gradient: string[] | undefined | null): string[] {
+export function getSafeGradient(gradient: string[] | undefined | null): readonly [string, string, ...string[]] {
   if (!gradient || !Array.isArray(gradient) || gradient.length < 2) {
     console.warn('SafeDefaults: Invalid gradient provided, using primary fallback');
-    return SAFE_GRADIENTS.primary;
+    return SAFE_GRADIENTS.primary as [string, string, ...string[]];
   }
-  return gradient;
+  return gradient as [string, string, ...string[]];
 }
 
 /**

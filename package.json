@@ -85,5 +85,13 @@
   "resolutions": {
     "@expo/prebuild-config": "latest"
   },
-  "private": true
+  "private": true,
+  "pnpm": {
+    "overrides": {
+      "ajv": "6.14.0"
+    }
+  },
+  "overrides": {
+    "ajv": "6.14.0"
+  }
 }

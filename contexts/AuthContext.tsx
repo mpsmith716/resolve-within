@@ -185,10 +185,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("[Auth] Signing in with email:", email);
       const result = await authClient.signIn.email({ email, password });
       
-      // Extract token from result if available
-      if (result?.data?.session?.token) {
+      // better-auth email sign-in returns token on data (not data.session)
+      const loginToken =
+        (result?.data as { token?: string } | undefined)?.token ??
+        (result?.data as { session?: { token?: string } } | undefined)?.session?.token;
+      if (loginToken) {
         console.log("[Auth] Login successful, saving token");
-        await setBearerToken(result.data.session.token);
+        await setBearerToken(loginToken);
       }
       
       await fetchUser();
@@ -204,13 +207,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await authClient.signUp.email({
         email,
         password,
-        name,
+        name: name ?? "",
       });
       
-      // Extract token from result if available
-      if (result?.data?.session?.token) {
+      // better-auth email sign-up returns token on data when session is created
+      const signupToken =
+        (result?.data as { token?: string | null } | undefined)?.token ??
+        (result?.data as { session?: { token?: string } } | undefined)?.session?.token;
+      if (signupToken) {
         console.log("[Auth] Signup successful, saving token");
-        await setBearerToken(result.data.session.token);
+        await setBearerToken(signupToken);
       }
       
       await fetchUser();
