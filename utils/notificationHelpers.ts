@@ -26,6 +26,8 @@ if (!isExpoGo) {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
       }),
@@ -94,9 +96,9 @@ export async function scheduleNotification(options: {
         sound: true,
       },
       trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: options.hour,
         minute: options.minute,
-        repeats: true,
       },
     });
     console.log(`✅ Notification scheduled with ID: ${id}`);

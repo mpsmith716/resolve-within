@@ -25,9 +25,11 @@ export default function VeteransCornerScreen() {
   const loadFavorites = async () => {
     try {
       const favs = await fetchFavorites();
-      setFavorites(favs);
+      // Local util returns Favorite objects; UI tracks exercise IDs
+      setFavorites(Array.isArray(favs) ? favs.map((fav) => (typeof fav === 'string' ? fav : fav.id)) : []);
     } catch (error) {
       console.error('Failed to load favorites:', error);
+      setFavorites([]);
     } finally {
       setLoadingFavorites(false);
     }
@@ -36,11 +38,9 @@ export default function VeteransCornerScreen() {
   const handleToggleFavorite = async (exerciseId: string) => {
     setTogglingFavorite(exerciseId);
     try {
-      const success = await toggleFavorite(exerciseId);
-      if (success) {
-        // Reload favorites to update UI
-        await loadFavorites();
-      }
+      await toggleFavorite(exerciseId, 'breathing');
+      // Always reload so both add and remove update the UI
+      await loadFavorites();
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
     } finally {
@@ -89,6 +89,11 @@ export default function VeteransCornerScreen() {
   const handleVetCenters = () => {
     console.log('Veterans: Tapped Vet Centers website');
     handleOpenURL('https://www.va.gov/find-locations/?facilityType=vet_center', 'Vet Centers');
+  };
+
+  const handleCrisisResources = () => {
+    console.log('Veterans: Opening crisis resources screen');
+    router.push('/crisis-resources');
   };
 
   const veteranCornerTitle = 'Veteran Corner';
@@ -272,10 +277,13 @@ export default function VeteransCornerScreen() {
               </TouchableOpacity>
             </View>
 
-            {favorites.length > 0 && (
-              <View style={styles.section}>
+            <View style={styles.section}>
                 <Text style={styles.subsectionTitle}>{favoritesTitle}</Text>
-                
+                {!loadingFavorites && favorites.length === 0 && (
+                  <View style={styles.emptyFavorites}>
+                    <Text style={styles.emptyFavoritesText}>{noFavoritesText}</Text>
+                  </View>
+                )}
                 {isFavorited('cloudy') && (
                   <TouchableOpacity
                     style={styles.card}
@@ -393,7 +401,6 @@ export default function VeteransCornerScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-            )}
 
             <View style={styles.section}>
               <Text style={styles.subsectionTitle}>{groundingTitle}</Text>
@@ -598,6 +605,33 @@ export default function VeteransCornerScreen() {
                     />
                     <Text style={[styles.resourceActionText, styles.resourceActionTextSecondary]}>{resource3Action}</Text>
                   </View>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.resourceCard}
+                onPress={handleCrisisResources}
+                activeOpacity={0.7}
+              >
+                <View style={styles.resourceCardTop}>
+                  <View style={styles.resourceIconContainer}>
+                    <IconSymbol
+                      ios_icon_name="cross.case.fill"
+                      android_material_icon_name="local-hospital"
+                      size={24}
+                      color="#FFFFFF"
+                    />
+                  </View>
+                  <View style={styles.resourceContent}>
+                    <Text style={styles.resourceTitle}>Crisis Resources</Text>
+                    <Text style={styles.resourceDescription}>988, Veterans Crisis Line, grounding, and rapid stabilization</Text>
+                  </View>
+                  <IconSymbol
+                    ios_icon_name="chevron.right"
+                    android_material_icon_name="arrow-forward"
+                    size={20}
+                    color={colors.accent}
+                  />
                 </View>
               </TouchableOpacity>
             </View>

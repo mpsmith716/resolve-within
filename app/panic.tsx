@@ -130,6 +130,11 @@ export default function PanicScreen() {
     router.push('/rapid-stabilization');
   };
 
+  const handleCrisisResources = () => {
+    console.log('[PanicScreen] More Crisis Resources pressed');
+    router.push('/crisis-resources');
+  };
+
   const handleGroundingItemPress = (index: number) => {
     const nextState = !checked[index];
     console.log(`[PanicScreen] Grounding item ${index} tapped: "${GROUNDING_ITEMS[index]}" -> ${nextState ? 'checked' : 'unchecked'}`);
@@ -148,6 +153,7 @@ export default function PanicScreen() {
   const groundingTitle = '5-4-3-2-1 Grounding';
   const groundingSubtitle = 'Bring yourself back to the present moment';
   const groundingSupportText = 'Take your time. Move through each step slowly.';
+  const moreResourcesText = 'More Crisis Resources';
 
   return (
     <>
@@ -270,6 +276,27 @@ export default function PanicScreen() {
               <Text style={styles.textButtonText}>{textButtonText}</Text>
             </TouchableOpacity>
           </View>
+
+          {/* 3b. More Crisis Resources (no auth required) */}
+          <TouchableOpacity
+            style={styles.moreResourcesButton}
+            onPress={handleCrisisResources}
+            activeOpacity={0.8}
+          >
+            <IconSymbol
+              ios_icon_name="cross.case.fill"
+              android_material_icon_name="local-hospital"
+              size={20}
+              color={YELLOW}
+            />
+            <Text style={styles.moreResourcesText}>{moreResourcesText}</Text>
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="arrow-forward"
+              size={18}
+              color={YELLOW}
+            />
+          </TouchableOpacity>
 
           {/* 4. 5-4-3-2-1 Grounding Section */}
           <View style={styles.groundingCard}>
@@ -493,6 +520,25 @@ const styles = StyleSheet.create({
   },
 
   // Grounding Card
+  moreResourcesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    borderWidth: 1,
+    borderColor: YELLOW_BORDER,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  moreResourcesText: {
+    flex: 1,
+    color: YELLOW,
+    fontSize: 16,
+    fontWeight: FontWeights.semibold,
+  },
   groundingCard: {
     borderRadius: 16,
     padding: 18,

@@ -21,7 +21,7 @@ export async function fetchFavorites(): Promise<Favorite[]> {
 /**
  * Toggle a favorite (add if not present, remove if present)
  */
-export async function toggleFavorite(id: string, type: Favorite['type']): Promise<boolean> {
+export async function toggleFavorite(id: string, type: Favorite['type'] = 'breathing'): Promise<boolean> {
   try {
     const favorites = await fetchFavorites();
     const existingIndex = favorites.findIndex((fav) => fav.id === id);
