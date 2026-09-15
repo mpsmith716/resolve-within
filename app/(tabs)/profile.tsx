@@ -23,6 +23,7 @@ interface UserProfile {
   id: string;
   email: string;
   name: string;
+  isAdmin?: boolean;
   userType: string;
   notificationTime: string;
   messageStreams: string[];
@@ -439,6 +440,34 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
+
+          {profile?.isAdmin ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Administration</Text>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  console.log('ProfileScreen: User tapped Admin Dashboard');
+                  router.push('/admin');
+                }}
+              >
+                <IconSymbol
+                  ios_icon_name="shield.fill"
+                  android_material_icon_name="admin-panel-settings"
+                  size={24}
+                  color="#CC0000"
+                />
+                <Text style={styles.menuItemText}>Admin Dashboard</Text>
+                <IconSymbol
+                  ios_icon_name="chevron.right"
+                  android_material_icon_name="arrow-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Privacy</Text>
             <TouchableOpacity
@@ -480,6 +509,29 @@ export default function ProfileScreen() {
                 color={colors.accent}
               />
               <Text style={styles.menuItemText}>Privacy Policy</Text>
+              <IconSymbol
+                ios_icon_name="chevron.right"
+                android_material_icon_name="arrow-forward"
+                size={20}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                console.log('ProfileScreen: User tapped Community Guidelines');
+                router.push('/community-guidelines');
+              }}
+            >
+              <IconSymbol
+                ios_icon_name="person.3.fill"
+                android_material_icon_name="groups"
+                size={24}
+                color={colors.accent}
+              />
+              <Text style={styles.menuItemText}>Community Guidelines</Text>
               <IconSymbol
                 ios_icon_name="chevron.right"
                 android_material_icon_name="arrow-forward"

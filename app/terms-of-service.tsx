@@ -52,7 +52,13 @@ export default function TermsOfServiceScreen() {
   const contactEmergencyText = 'If you are in immediate danger or experiencing a mental health emergency, contact emergency services immediately.';
   const crisisLineText = 'United States: 988 Suicide and Crisis Lifeline';
   const callOrTextText = 'Call or text 988 for immediate crisis support';
+  const noMonitoringText = 'Community posts and in-app reports are reviewed when possible, but Resolve Within does not provide emergency response and does not continuously monitor posts for crises or clinical emergencies.';
   const internationalText = 'International users should contact their local emergency services or crisis support lines.';
+
+  const ugcIntroText = 'Community areas may include user-generated content (UGC) such as posts shared by other users.';
+  const ugcReportText = 'Users can report posts that appear to violate community guidelines or raise safety concerns.';
+  const ugcModerationText = 'Resolve Within may moderate, hide, or remove community content that violates these Terms, Community Guidelines, or that we reasonably believe harms community safety.';
+  const ugcNotEmergencyText = 'Reporting is not emergency monitoring. If you or someone else is in crisis, contact 988 or local emergency services.';
 
   const userResponsibilityText = 'You are solely responsible for how you interpret, apply, and act upon any content, exercises, or information provided through this app.';
   const personalJudgmentText = 'Use of this app should be guided by your own judgment and, when appropriate, consultation with qualified professionals.';
@@ -149,6 +155,18 @@ export default function TermsOfServiceScreen() {
               <Text style={styles.crisisText}>{crisisLineText}</Text>
               <Text style={styles.crisisText}>{callOrTextText}</Text>
               <Text style={[styles.crisisText, { marginTop: 8 }]}>{internationalText}</Text>
+            </View>
+            <Text style={styles.paragraph}>{noMonitoringText}</Text>
+          </View>
+
+          {/* Section 3b: Community Content & Moderation */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>3b. Community Content & Moderation</Text>
+            <Text style={styles.paragraph}>{ugcIntroText}</Text>
+            <Text style={styles.paragraph}>{ugcReportText}</Text>
+            <Text style={styles.paragraph}>{ugcModerationText}</Text>
+            <View style={styles.highlightBox}>
+              <Text style={styles.highlightText}>{ugcNotEmergencyText}</Text>
             </View>
           </View>
 
