@@ -167,7 +167,7 @@ export function registerSpotlightRoutes(app: App) {
           .from(spotlightVotes)
           .where(eq(spotlightVotes.nominationId, nomination.id));
 
-        const userVote = votes.find((v) => v.voterId === session.user.id);
+        const userVote = votes.find((v: { voterId: string }) => v.voterId === session.user.id);
 
         const [post] = await db
           .select()
@@ -275,7 +275,7 @@ export function registerSpotlightRoutes(app: App) {
         .from(spotlightVotes)
         .where(eq(spotlightVotes.nominationId, request.params.nominationId as any));
 
-      const userVote = votes.find((v) => v.voterId === session.user.id);
+      const userVote = votes.find((v: { voterId: string }) => v.voterId === session.user.id);
 
       app.logger.info({ nominationId: request.params.nominationId, voteCount: votes.length }, "Vote toggled");
 

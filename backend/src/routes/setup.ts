@@ -92,9 +92,10 @@ export function registerSetupRoutes(app: App) {
         };
       } catch (error: unknown) {
         if (error instanceof APIError) {
-          app.logger.error({ email: reviewerEmail, err: error.message }, "API error creating reviewer account");
-          reply.code(error.statusCode || 400);
-          return { error: error.message };
+          const apiError = error as { message?: string; statusCode?: number };
+          app.logger.error({ email: reviewerEmail, err: apiError.message }, "API error creating reviewer account");
+          reply.code(apiError.statusCode || 400);
+          return { error: apiError.message || "API error" };
         }
 
         app.logger.error({ email: reviewerEmail, err: error }, "Failed to create reviewer account");

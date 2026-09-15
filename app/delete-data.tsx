@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -13,11 +12,14 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import * as SecureStore from 'expo-secure-store';
 import { authenticatedDelete } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { clearFavorites } from '@/utils/favorites';
+import { safeDeleteItem } from '@/utils/safeStorage';
 
 const styles = StyleSheet.create({
   container: {
@@ -154,13 +156,60 @@ const styles = StyleSheet.create({
   },
 });
 
+async function clearLocalUserData(): Promise<void> {
+  const secureKeys = [
+    '@resolve_within_notifications',
+    'crisis_disclaimer_shown',
+    'message_preferences',
+    'app_preferences',
+    'user_settings',
+    'crisisDisclaimerAccepted',
+    'onboarding_completed',
+    'resolveWithinFavorites',
+  ];
+
+  for (const key of secureKeys) {
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch {
+      // Key may not exist or platform may not support SecureStore
+    }
+    try {
+      await safeDeleteItem(key);
+    } catch {
+      // Continue
+    }
+  }
+
+  const asyncKeys = [
+    '@resolve_within_notifications',
+    '@resolve_within_message_preferences',
+  ];
+  for (const key of asyncKeys) {
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch {
+      // Continue
+    }
+  }
+
+  try {
+    await clearFavorites();
+  } catch {
+    // Continue — local best-effort
+  }
+}
+
 export default function DeleteDataScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleClose = useCallback(() => {
-    console.log('[DeleteData] close pressed');
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -175,84 +224,60 @@ export default function DeleteDataScreen() {
     });
     return () => subscription.remove();
   }, [handleClose]);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const dataToDelete = [
-    { icon: 'edit', iconMaterial: 'edit', label: 'Journal Entries' },
-    { icon: 'face.smiling', iconMaterial: 'mood', label: 'Mood Selections' },
-    { icon: 'gear', iconMaterial: 'settings', label: 'App Preferences' },
-    { icon: 'bell', iconMaterial: 'notifications', label: 'Notification Settings' },
-    { icon: 'message', iconMaterial: 'message', label: 'Message Preferences' },
+    { icon: 'edit', iconMaterial: 'edit' as const, label: 'Journal Entries & Mood History' },
+    { icon: 'bubble.left', iconMaterial: 'forum' as const, label: 'Community Posts & Reactions' },
+    { icon: 'heart', iconMaterial: 'favorite' as const, label: 'Favorites & Breathing Sessions' },
+    { icon: 'gear', iconMaterial: 'settings' as const, label: 'App Preferences' },
+    { icon: 'bell', iconMaterial: 'notifications' as const, label: 'Notification Settings' },
+    { icon: 'message', iconMaterial: 'message' as const, label: 'Message Preferences' },
   ];
 
   async function handleDeleteData() {
-    console.log('DeleteDataScreen: User confirmed data deletion');
     setShowConfirmModal(false);
     setIsDeleting(true);
+    setErrorMessage('');
 
     try {
-      // Delete local data from SecureStore
-      console.log('DeleteDataScreen: Clearing local SecureStore data');
-      const keysToDelete = [
-        '@resolve_within_notifications',
-        'crisis_disclaimer_shown',
-        'message_preferences',
-        'app_preferences',
-        'user_settings',
-      ];
-      
-      for (const key of keysToDelete) {
-        try {
-          await SecureStore.deleteItemAsync(key);
-          console.log(`DeleteDataScreen: Deleted SecureStore key: ${key}`);
-        } catch (error) {
-          console.log(`DeleteDataScreen: Key ${key} not found or error deleting:`, error);
-          // Continue with other keys even if one fails
-        }
-      }
+      // Server-authoritative deletion first — do not claim success if this fails
+      await authenticatedDelete('/api/user/data');
 
-      // Delete backend data (journal entries, mood data)
-      console.log('DeleteDataScreen: Deleting backend data');
-      try {
-        await authenticatedDelete('/api/user/data');
-        console.log('DeleteDataScreen: Backend data deleted successfully');
-      } catch (error) {
-        console.error('DeleteDataScreen: Error deleting backend data:', error);
-        // Continue even if backend deletion fails - local data is cleared
-      }
+      // Clear local/session-adjacent preference storage after server success
+      await clearLocalUserData();
 
-      console.log('DeleteDataScreen: Data deletion complete');
       setIsDeleting(false);
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('DeleteDataScreen: Error during data deletion:', error);
+      console.error('DeleteDataScreen: Deletion failed (no false success)');
       setIsDeleting(false);
-      setShowSuccessModal(true); // Show success anyway since local data was cleared
+      setErrorMessage(
+        'We could not delete your data right now. Nothing was marked deleted. Please check your connection and try again.'
+      );
+      setShowErrorModal(true);
     }
   }
 
   async function handleSuccessClose() {
-    console.log('DeleteDataScreen: User acknowledged success, signing out and navigating to auth');
     setShowSuccessModal(false);
     try {
-      // Sign out the user since all their data has been deleted
       await signOut();
-      console.log('DeleteDataScreen: User signed out after data deletion');
-    } catch (error) {
-      console.error('DeleteDataScreen: Error signing out after data deletion:', error);
-      // Navigate to auth anyway
+    } catch {
       router.replace('/auth');
     }
   }
 
   const titleText = 'Delete My Data';
-  const descriptionText = 'This will permanently delete all your locally stored data from this device. This action cannot be undone.';
-  const warningText = 'Warning: This will delete all your journal entries, mood history, and app preferences. You will need to set up your preferences again.';
+  const descriptionText =
+    'This permanently deletes your journal, mood history, community content, favorites, breathing history, and preferences from Resolve Within servers and this device. Your login account remains so you can sign in again later. This cannot be undone.';
+  const warningText =
+    'Warning: Journal entries, community posts, reactions, favorites, breathing history, and preferences will be permanently removed. Moderation audit records may retain anonymized report metadata. You will be signed out after a successful deletion.';
   const confirmTitle = 'Confirm Deletion';
-  const confirmMessage = 'Are you sure you want to delete all your data? This action cannot be undone.';
+  const confirmMessage =
+    'Are you sure you want to delete all your personal data? This action cannot be undone.';
   const successTitle = 'Data Deleted';
-  const successMessage = 'All your data has been successfully deleted. You will be signed out now.';
+  const successMessage =
+    'Your personal data has been deleted. You will be signed out now.';
   const cancelText = 'Cancel';
   const deleteText = 'Delete All Data';
   const confirmDeleteText = 'Yes, Delete Everything';
@@ -318,10 +343,7 @@ export default function DeleteDataScreen() {
 
           <TouchableOpacity
             style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
-            onPress={() => {
-              console.log('DeleteDataScreen: User tapped Delete All Data button');
-              setShowConfirmModal(true);
-            }}
+            onPress={() => setShowConfirmModal(true)}
             disabled={isDeleting}
           >
             {isDeleting ? (
@@ -346,10 +368,7 @@ export default function DeleteDataScreen() {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => {
-                  console.log('DeleteDataScreen: User cancelled deletion');
-                  setShowConfirmModal(false);
-                }}
+                onPress={() => setShowConfirmModal(false)}
               >
                 <Text style={styles.modalButtonText}>{cancelText}</Text>
               </TouchableOpacity>
@@ -384,6 +403,26 @@ export default function DeleteDataScreen() {
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonConfirm]}
               onPress={handleSuccessClose}
+            >
+              <Text style={styles.modalButtonText}>{okText}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showErrorModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Deletion Failed</Text>
+            <Text style={styles.modalMessage}>{errorMessage}</Text>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonConfirm]}
+              onPress={() => setShowErrorModal(false)}
             >
               <Text style={styles.modalButtonText}>{okText}</Text>
             </TouchableOpacity>
