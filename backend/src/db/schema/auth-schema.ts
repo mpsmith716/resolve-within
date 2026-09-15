@@ -5,6 +5,7 @@ export const user = pgTable("user", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
+  isAdmin: boolean("is_admin").default(false).notNull(),
   image: text("image"),
   userType: text("user_type", { enum: ["veteran", "civilian", "prefer_not_to_say"] }),
   notificationTime: text("notification_time").default("09:00"),

@@ -18,6 +18,7 @@ import { getSafeGradient, getSafeString } from '@/constants/SafeDefaults';
 import { safeAnimateOpacity, safeAnimateScale, safeStartAnimation, safeResetValue } from '@/utils/safeAnimations';
 import { FontWeights } from '@/utils/fontHelpers';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Audio } from 'expo-av';
 
 // ─── Level system ────────────────────────────────────────────────────────────
 
@@ -165,16 +166,120 @@ export default function ResetSessionScreen() {
   const screenFadeAnim = useRef(new Animated.Value(0)).current;
   const currentAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
+  // Optional guided breathing audio (exercise works without it)
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const [audioReady, setAudioReady] = useState(false);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [audioFailed, setAudioFailed] = useState(false);
+
+
   // Fade in on mount
   useEffect(() => {
     console.log('[Session] screen mounted, level:', config.level, 'title:', config.title);
     safeStartAnimation(safeAnimateOpacity(screenFadeAnim, 1, { duration: 600 }));
   }, [screenFadeAnim]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Load optional calm-breathing audio; graceful failure keeps exercise usable
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+
+        // Unload any prior instance to avoid overlapping playback
+        if (soundRef.current) {
+          await soundRef.current.unloadAsync();
+          soundRef.current = null;
+        }
+
+        const { sound } = await Audio.Sound.createAsync(
+          require('../assets/audio/calm-breathing.mp3'),
+          { shouldPlay: false, isLooping: true, volume: 0.85 }
+        );
+
+        if (cancelled) {
+          await sound.unloadAsync();
+          return;
+        }
+
+        sound.setOnPlaybackStatusUpdate((status: any) => {
+          if (!status.isLoaded) {
+            setAudioPlaying(false);
+            return;
+          }
+          setAudioPlaying(status.isPlaying);
+        });
+
+        soundRef.current = sound;
+        setAudioReady(true);
+        setAudioFailed(false);
+        console.log('[Session] guided audio ready');
+      } catch (err) {
+        console.warn('[Session] guided audio init failed (exercise still usable):', err);
+        if (!cancelled) {
+          setAudioFailed(true);
+          setAudioReady(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      const sound = soundRef.current;
+      soundRef.current = null;
+      if (sound) {
+        sound.stopAsync().catch(() => undefined);
+        sound.unloadAsync().catch(() => undefined);
+      }
+      setAudioPlaying(false);
+    };
+  }, []);
+
+  const stopAudio = useCallback(async () => {
+    const sound = soundRef.current;
+    if (!sound) return;
+    try {
+      await sound.stopAsync();
+      await sound.setPositionAsync(0);
+    } catch (err) {
+      console.warn('[Session] stopAudio failed:', err);
+    } finally {
+      setAudioPlaying(false);
+    }
+  }, []);
+
+  const toggleAudio = useCallback(async () => {
+    const sound = soundRef.current;
+    if (!sound || !audioReady) return;
+    try {
+      const status = await sound.getStatusAsync();
+      if (!status.isLoaded) return;
+      if (status.isPlaying) {
+        await sound.pauseAsync();
+        setAudioPlaying(false);
+      } else {
+        // Ensure single playback instance
+        await sound.playAsync();
+        setAudioPlaying(true);
+      }
+    } catch (err) {
+      console.warn('[Session] toggleAudio failed:', err);
+      setAudioFailed(true);
+    }
+  }, [audioReady]);
+
   // ─── closeSession ─────────────────────────────────────────────────────────
   const closeSession = useCallback(() => {
     console.log('[Session] closeSession called');
     // Stop any running animations/timers immediately
+    void stopAudio();
     isActiveRef.current = false;
     if (cycleTimerRef.current) {
       clearTimeout(cycleTimerRef.current);
@@ -201,7 +306,7 @@ export default function ResetSessionScreen() {
         console.error('[Session] critical navigation failure:', e2);
       }
     }
-  }, [router]);
+  }, [router, stopAudio]);
 
   // Android hardware back button
   useEffect(() => {
@@ -278,11 +383,12 @@ export default function ResetSessionScreen() {
           setIsActive(false);
           setSessionComplete(true);
           setShowJournalPrompt(true);
+          void stopAudio();
         }
         return next;
       });
     });
-  }, [config, breathScale, breathOpacity]);
+  }, [config, breathScale, breathOpacity, stopAudio]);
 
   // Kick off next cycle whenever cycleCount changes and session is still active
   useEffect(() => {
@@ -297,6 +403,7 @@ export default function ResetSessionScreen() {
       console.log('[Session] user stopped session after', cycleCount, 'cycles');
       isActiveRef.current = false;
       stopAnimations();
+      void stopAudio();
       setIsActive(false);
       safeResetValue(breathScale, 0.4);
       safeResetValue(breathOpacity, 0.25);
@@ -376,7 +483,7 @@ export default function ResetSessionScreen() {
       />
 
       <Animated.View style={[styles.fullScreen, { opacity: screenFadeAnim }]} pointerEvents="box-none">
-        <LinearGradient colors={safeGradient} style={[styles.gradient, { paddingTop: insets.top + 16 }]} pointerEvents="box-none">
+        <LinearGradient colors={safeGradient as [string, string, ...string[]]} style={[styles.gradient, { paddingTop: insets.top + 16 }]} pointerEvents="box-none">
 
           {/* ── Header ── */}
           <View style={styles.header} pointerEvents="box-none">
@@ -448,6 +555,30 @@ export default function ResetSessionScreen() {
               <View style={[styles.progressBarFill, { width: progressPercentDisplay as any }]} />
             </View>
           </View>
+
+          {/* ── Optional guided audio ── */}
+          {audioReady ? (
+            <View style={styles.audioRow} pointerEvents="box-none">
+              <TouchableOpacity
+                style={styles.audioButton}
+                onPress={() => { void toggleAudio(); }}
+                activeOpacity={0.8}
+              >
+                <IconSymbol
+                  ios_icon_name={audioPlaying ? 'pause.fill' : 'speaker.wave.2.fill'}
+                  android_material_icon_name={audioPlaying ? 'pause' : 'volume-up'}
+                  size={18}
+                  color={colors.text}
+                />
+                <Text style={styles.audioButtonText}>
+                  {audioPlaying ? 'Pause audio' : 'Play calm audio'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.audioHint}>Optional — exercise works without sound</Text>
+            </View>
+          ) : audioFailed ? (
+            <Text style={styles.audioHint}>Audio unavailable — breathing exercise still works</Text>
+          ) : null}
 
           {/* ── Start/Stop button ── */}
           <View style={styles.buttonContainer} pointerEvents="box-none">
@@ -656,6 +787,33 @@ const styles = StyleSheet.create({
   },
 
   // ── Start/Stop button ──
+  audioRow: {
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 6,
+  },
+  audioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  audioButtonText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: FontWeights.semibold,
+  },
+  audioHint: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
   buttonContainer: {
     marginTop: 8,
   },

@@ -8,13 +8,14 @@ interface HidePostBody {
   reason: string;
 }
 
-const ADMIN_ROLE = "admin"; // You would normally get this from a role/permissions system
-
-// Helper to check if user is admin
+// Helper to check if user is admin (server-enforced; not client-assignable)
 async function isAdmin(userId: string, db: any): Promise<boolean> {
-  // For now, return false. In production, check against a roles/permissions table
-  // This is a placeholder - you should implement proper admin role checking
-  return false;
+  const [row] = await db
+    .select({ isAdmin: user.isAdmin })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return !!row?.isAdmin;
 }
 
 export function registerAdminRoutes(app: App) {

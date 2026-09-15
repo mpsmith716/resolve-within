@@ -18,10 +18,15 @@ import ReportSafetyForm from '@/components/ReportSafetyForm';
 
 interface ReportModalProps {
   visible: boolean;
+  postId: string;
   onClose: () => void;
 }
 
-export default function ReportModal({ visible, onClose }: ReportModalProps) {
+export default function ReportModal({
+  visible,
+  postId,
+  onClose,
+}: ReportModalProps) {
   const insets = useSafeAreaInsets();
   const [showContentForm, setShowContentForm] = useState(false);
   const [showSafetyForm, setShowSafetyForm] = useState(false);
@@ -70,7 +75,7 @@ export default function ReportModal({ visible, onClose }: ReportModalProps) {
                 Help us keep this space safe and supportive.
               </Text>
               <Text style={styles.reviewNote}>
-                Reports are reviewed to help keep this space safe.
+                Reports are reviewed when possible. This is not emergency monitoring — if you or someone else is in crisis, use 988 or local emergency resources.
               </Text>
             </View>
             <TouchableOpacity
@@ -141,7 +146,7 @@ export default function ReportModal({ visible, onClose }: ReportModalProps) {
                 <View style={styles.optionTextBlock}>
                   <Text style={styles.optionTitle}>Report Safety Concern</Text>
                   <Text style={styles.optionSubtitle}>
-                    A user seems in distress or may need immediate attention
+                    Content that raises a safety concern (not an emergency hotline)
                   </Text>
                 </View>
               </View>
@@ -149,20 +154,21 @@ export default function ReportModal({ visible, onClose }: ReportModalProps) {
           </View>
         </View>
       </View>
-      <ReportContentForm
-        visible={showContentForm}
-        onClose={() => {
-          setShowContentForm(false);
-          onClose();
-        }}
-      />
-      <ReportSafetyForm
-        visible={showSafetyForm}
-        onClose={() => {
-          setShowSafetyForm(false);
-          onClose();
-        }}
-      />
+   <ReportContentForm
+  visible={showContentForm}
+  postId={postId}
+  onClose={() => {
+    setShowContentForm(false);
+  }}
+/>
+    <ReportSafetyForm
+  visible={showSafetyForm}
+  postId={postId}
+  onClose={() => {
+    setShowSafetyForm(false);
+    onClose();
+  }}
+/>
     </Modal>
   );
 }

@@ -52,6 +52,46 @@ export const communityPostsRelations = relations(communityPosts, ({ one, many })
   nominations: many(spotlightNominations),
 }));
 
+
+// Reported Community Posts
+export const reportedPosts = pgTable("reported_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("post_id")
+    .notNull()
+    .references(() => communityPosts.id, { onDelete: "cascade" }),
+  reporterUserId: text("reporter_user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull().default("safety_concern"),
+  notes: text("notes"),
+  status: text("status", {
+    enum: ["pending", "reviewed", "dismissed", "action_taken"],
+  })
+    .notNull()
+    .default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedBy: text("reviewed_by").references(() => user.id, { onDelete: "set null" }),
+});
+
+export const reportedPostsRelations = relations(reportedPosts, ({ one }) => ({
+  post: one(communityPosts, {
+    fields: [reportedPosts.postId],
+    references: [communityPosts.id],
+  }),
+  reporter: one(user, {
+    fields: [reportedPosts.reporterUserId],
+    references: [user.id],
+  }),
+  reviewer: one(user, {
+    fields: [reportedPosts.reviewedBy],
+    references: [user.id],
+  }),
+}));
+
+
 // Post Interactions (likes, encourages, flags)
 export const postInteractions = pgTable(
   "post_interactions",
@@ -164,7 +204,7 @@ export const dailyMessages = pgTable("daily_messages", {
 export const adminActions = pgTable("admin_actions", {
   id: uuid("id").primaryKey().defaultRandom(),
   adminId: text("admin_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-  action: text("action", { enum: ["hide_post", "unhide_post", "delete_post", "ban_user"] }).notNull(),
+  action: text("action", { enum: ["hide_post", "unhide_post", "delete_post", "ban_user", "dismiss_report"] }).notNull(),
   targetId: text("target_id").notNull(),
   reason: text("reason").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

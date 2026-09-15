@@ -499,6 +499,63 @@ describe("API Integration Tests", () => {
   });
 
   // ============ Admin Tests ============
+
+  // ============ Reports & Admin Moderation Authz ============
+  test("Create report for community post", async () => {
+    const res = await authenticatedApi("/api/reports", authToken, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        postId: communityPostId,
+        reason: "content_or_user_report",
+        notes: "integration test report",
+      }),
+    });
+    await expectStatus(res, 201);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.reportId).toBeDefined();
+  });
+
+  test("List admin reports - 403 for non-admin user", async () => {
+    const res = await authenticatedApi("/api/admin/reports", authToken);
+    await expectStatus(res, 403);
+  });
+
+  test("Hide report action - 403 for non-admin user", async () => {
+    const res = await authenticatedApi("/api/admin/reports/00000000-0000-0000-0000-000000000000/hide", authToken, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    await expectStatus(res, 403);
+  });
+
+  test("Dismiss report action - 403 for non-admin user", async () => {
+    const res = await authenticatedApi("/api/admin/reports/00000000-0000-0000-0000-000000000000/dismiss", authToken, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    await expectStatus(res, 403);
+  });
+
+  test("Preferences cannot self-assign isAdmin", async () => {
+    const res = await authenticatedApi("/api/user/preferences", authToken, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userType: "veteran",
+        isAdmin: true,
+      }),
+    });
+    await expectStatus(res, 200);
+    const profileRes = await authenticatedApi("/api/user/profile", authToken);
+    await expectStatus(profileRes, 200);
+    const profile = await profileRes.json();
+    expect(profile.isAdmin === true).toBe(false);
+  });
+
   test("Create post for admin moderation", async () => {
     const res = await authenticatedApi("/api/community/veteran", authToken, {
       method: "POST",

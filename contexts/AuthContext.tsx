@@ -21,6 +21,7 @@ export interface UserProfile {
   id: string;
   email: string;
   name?: string;
+  isAdmin?: boolean;
   userType?: string | null;
   notificationTime?: string | null;
   messageStreams?: string[] | null;

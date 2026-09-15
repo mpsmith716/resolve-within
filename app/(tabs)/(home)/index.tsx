@@ -180,6 +180,7 @@ export default function HomeScreen() {
   const [savingPost, setSavingPost] = useState(false);
   const [interactingPost, setInteractingPost] = useState<string | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [selectedReportPostId, setSelectedReportPostId] = useState<string | null>(null);
 
   const safeGradient = getSafeGradient([colors.background, '#0a0e1a', colors.background]);
 
@@ -590,6 +591,12 @@ export default function HomeScreen() {
     
     return (
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        <TouchableOpacity
+          onPress={() => router.push('/community-guidelines')}
+          style={{ alignSelf: 'flex-end', paddingHorizontal: 16, paddingBottom: 4 }}
+        >
+          <Text style={{ color: colors.accent, fontSize: 13, fontWeight: '600' }}>Community Guidelines</Text>
+        </TouchableOpacity>
         <View style={styles.communityTypeRow}>
           <TouchableOpacity
             style={[styles.communityTypeBtn, communityType === 'healing_together' && styles.communityTypeBtnActive]}
@@ -692,6 +699,7 @@ export default function HomeScreen() {
                         style={styles.postActionBtn}
                         onPress={() => {
                           console.log('[Home] Tapped flag on post:', post.id, '— opening ReportModal');
+                          setSelectedReportPostId(post.id);
                           setReportModalVisible(true);
                         }}
                         disabled={interactingPost === post.id}
@@ -715,10 +723,16 @@ export default function HomeScreen() {
 
   return (
     <LinearGradient colors={safeGradient} style={styles.container}>
-      <ReportModal
-        visible={reportModalVisible}
-        onClose={() => setReportModalVisible(false)}
-      />
+      {selectedReportPostId ? (
+        <ReportModal
+          visible={reportModalVisible}
+          postId={selectedReportPostId}
+          onClose={() => {
+            setReportModalVisible(false);
+            setSelectedReportPostId(null);
+          }}
+        />
+      ) : null}
       <View style={[styles.tabBar, { paddingTop: insets.top + 8 }]}>
         {(['home', 'journal', 'community'] as ActiveTab[]).map(tab => {
           const tabLabelText = tab === 'home' ? homeTabLabel : tab === 'journal' ? journalTabLabel : communityTabLabel;
