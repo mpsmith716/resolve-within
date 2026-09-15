@@ -34,8 +34,6 @@ export function registerUserRoutes(app: App) {
                 type: "array",
                 items: { type: "string" },
               },
-              badgeTier: { type: "string" },
-              showBadge: { type: "boolean" },
             },
           },
           401: {
@@ -69,8 +67,6 @@ export function registerUserRoutes(app: App) {
         userType: userProfile.userType,
         notificationTime: userProfile.notificationTime,
         messageStreams: userProfile.messageStreams,
-        badgeTier: userProfile.badgeTier,
-        showBadge: userProfile.showBadge,
       };
 
       app.logger.info({ userId: session.user.id }, "User profile fetched successfully");
@@ -113,8 +109,6 @@ export function registerUserRoutes(app: App) {
                 type: "array",
                 items: { type: "string" },
               },
-              badgeTier: { type: "string" },
-              showBadge: { type: "boolean" },
             },
           },
           401: {
@@ -146,8 +140,6 @@ export function registerUserRoutes(app: App) {
         userType: updatedUser.userType,
         notificationTime: updatedUser.notificationTime,
         messageStreams: updatedUser.messageStreams,
-        badgeTier: updatedUser.badgeTier,
-        showBadge: updatedUser.showBadge,
       };
 
       app.logger.info({ userId: session.user.id }, "User preferences updated successfully");

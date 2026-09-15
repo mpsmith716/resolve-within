@@ -480,7 +480,8 @@ describe("API Integration Tests", () => {
     const res = await api("/api/setup/create-reviewer", {
       method: "POST",
     });
-    await expectStatus(res, 200, 400, 500);
+    // 503 when REVIEWER_EMAIL/REVIEWER_PASSWORD are not configured
+    await expectStatus(res, 200, 400, 500, 503);
     const data = await res.json();
 
     // If successful (200), expect created and optional reason
@@ -491,7 +492,7 @@ describe("API Integration Tests", () => {
         expect(typeof data.reason).toBe("string");
       }
     } else {
-      // If error (400 or 500), expect error message
+      // If error (400, 500, or 503), expect error message
       expect(data.error).toBeDefined();
       expect(typeof data.error).toBe("string");
     }
