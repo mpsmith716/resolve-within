@@ -39,7 +39,7 @@ const DEFAULT_MESSAGE =
 export default function AuthScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ context?: string; returnTo?: string }>();
-  const { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, loading: authLoading } = useAuth();
+  const { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, loading: authLoading, needsOnboarding } = useAuth();
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [loading, setLoading] = useState(false);
@@ -59,14 +59,26 @@ export default function AuthScreen() {
   const switchText = mode === 'signin' ? 'Create Account' : 'Already have an account? Sign In';
   const submitButtonText = mode === 'signin' ? 'Sign In' : 'Create Account';
 
-  const handlePostAuthRedirect = () => {
+  const handlePostAuthRedirect = async (forceOnboarding = false) => {
     if (returnTo) {
       console.log('[Auth] Post-login redirect to returnTo:', returnTo);
       router.replace(returnTo as any);
-    } else {
-      console.log('[Auth] Post-login redirect to tabs');
-      router.replace('/(tabs)');
+      return;
     }
+
+    try {
+      const shouldOnboard = forceOnboarding || (await needsOnboarding());
+      if (shouldOnboard) {
+        console.log('[Auth] Post-login redirect to onboarding');
+        router.replace('/onboarding');
+        return;
+      }
+    } catch (error: any) {
+      console.warn('[Auth] Onboarding check failed, continuing to tabs:', error?.message || error);
+    }
+
+    console.log('[Auth] Post-login redirect to tabs');
+    router.replace('/(tabs)');
   };
 
   const handleEmailSubmit = async () => {
@@ -92,12 +104,13 @@ export default function AuthScreen() {
         console.log('[Auth] Calling signInWithEmail for:', email);
         await signInWithEmail(email.trim(), password);
         console.log('[Auth] Email sign-in successful');
+        await handlePostAuthRedirect(false);
       } else {
         console.log('[Auth] Calling signUpWithEmail for:', email);
         await signUpWithEmail(email.trim(), password, name.trim());
         console.log('[Auth] Email sign-up successful');
+        await handlePostAuthRedirect(true);
       }
-      handlePostAuthRedirect();
     } catch (error: any) {
       console.error('[Auth] Email auth error:', error?.message || error);
       setErrorMessage(error?.message || 'Unable to sign in. Please check your details and try again.');
@@ -117,7 +130,7 @@ export default function AuthScreen() {
         await signInWithApple();
       }
       console.log('[Auth] Social auth successful:', provider);
-      handlePostAuthRedirect();
+      await handlePostAuthRedirect(false);
     } catch (error: any) {
       console.error('[Auth] Social auth error:', error?.message || error);
       setErrorMessage('Unable to sign in. Please check your details and try again.');

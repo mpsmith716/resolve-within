@@ -16,17 +16,18 @@ import { AppModal } from '@/components/ErrorBoundary';
 import { colors } from '@/styles/commonStyles';
 import { authenticatedPut } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { safeSetItem } from '@/utils/safeStorage';
 
 type UserType = 'veteran' | 'civilian';
-type MessageStream = 'resilience' | 'healing' | 'community' | 'gratitude';
+type MessageStream = 'mental_health' | 'veteran' | 'faith';
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(1);
   const [userType, setUserType] = useState<UserType | null>(null);
-  const [messageStreams, setMessageStreams] = useState<MessageStream[]>(['resilience']);
+  const [messageStreams, setMessageStreams] = useState<MessageStream[]>(['mental_health']);
   const [loading, setLoading] = useState(false);
   const [errorModal, setErrorModal] = useState<{ visible: boolean; title: string; message: string }>({ visible: false, title: '', message: '' });
 
@@ -48,13 +49,23 @@ export default function OnboardingScreen() {
       return;
     }
 
+    // Faith is optional; ensure at least one supported stream is sent
+    const streamsToSave: MessageStream[] =
+      messageStreams.length > 0 ? messageStreams : ['mental_health'];
+
     setLoading(true);
     try {
-      console.log('[Onboarding] Saving preferences:', { userType, messageStreams });
+      console.log('[Onboarding] Saving preferences:', { userType, messageStreams: streamsToSave });
       await authenticatedPut('/api/user/preferences', {
         userType,
-        messageStreams,
+        messageStreams: streamsToSave,
       });
+      await safeSetItem('onboarding_completed', 'true');
+      try {
+        await refreshProfile();
+      } catch {
+        // Profile refresh is best-effort after preferences save
+      }
       console.log('[Onboarding] Preferences saved successfully, navigating to home');
       router.replace('/(tabs)/(home)/');
     } catch (error: any) {
@@ -71,6 +82,8 @@ export default function OnboardingScreen() {
       user?.user_metadata?.name ||
       profile?.first_name ||
       profile?.username ||
+      profile?.name ||
+      user?.name ||
       "there";
 
     const greeting = `Hello, ${displayName} 👋`;
@@ -142,25 +155,22 @@ export default function OnboardingScreen() {
 
   const getMessageStreamsDisplay = () => {
     return messageStreams.map((stream) => {
-      if (stream === 'resilience') return 'Resilience';
-      if (stream === 'healing') return 'Healing';
-      if (stream === 'community') return 'Community';
-      if (stream === 'gratitude') return 'Gratitude';
+      if (stream === 'mental_health') return 'Mental Health';
+      if (stream === 'veteran') return 'Veteran';
+      if (stream === 'faith') return 'Faith (optional)';
       return '';
     }).join(', ');
   };
 
   const renderStep2 = () => {
     const title = "Choose Your Message Streams";
-    const subtitle = "Select the types of daily messages you would like to receive";
-    const resilienceLabel = "Resilience";
-    const resilienceDesc = "Strength and perseverance";
-    const healingLabel = "Healing";
-    const healingDesc = "Recovery and growth";
-    const communityLabel = "Community";
-    const communityDesc = "Connection and support";
-    const gratitudeLabel = "Gratitude";
-    const gratitudeDesc = "Appreciation and mindfulness";
+    const subtitle = "Select the types of daily messages you would like to receive. Faith is optional.";
+    const mentalHealthLabel = "Mental Health";
+    const mentalHealthDesc = "Support for emotional wellness and recovery";
+    const veteranLabel = "Veteran";
+    const veteranDesc = "Messages informed by military and veteran experience";
+    const faithLabel = "Faith (optional)";
+    const faithDesc = "Optional faith-informed encouragement — never required";
     const backButton = "Back";
     const nextButton = "Next";
 
@@ -170,66 +180,50 @@ export default function OnboardingScreen() {
         <Text style={styles.subtitle}>{subtitle}</Text>
 
         <TouchableOpacity
-          style={[styles.optionCard, messageStreams.includes('resilience') && styles.optionCardSelected]}
-          onPress={() => toggleMessageStream('resilience')}
-        >
-          <IconSymbol
-            ios_icon_name="bolt.fill"
-            android_material_icon_name="flash-on"
-            size={32}
-            color={messageStreams.includes('resilience') ? colors.accent : colors.text}
-          />
-          <View style={styles.optionTextContainer}>
-            <Text style={styles.optionLabel}>{resilienceLabel}</Text>
-            <Text style={styles.optionDescription}>{resilienceDesc}</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.optionCard, messageStreams.includes('healing') && styles.optionCardSelected]}
-          onPress={() => toggleMessageStream('healing')}
+          style={[styles.optionCard, messageStreams.includes('mental_health') && styles.optionCardSelected]}
+          onPress={() => toggleMessageStream('mental_health')}
         >
           <IconSymbol
             ios_icon_name="heart.fill"
             android_material_icon_name="favorite"
             size={32}
-            color={messageStreams.includes('healing') ? colors.accent : colors.text}
+            color={messageStreams.includes('mental_health') ? colors.accent : colors.text}
           />
           <View style={styles.optionTextContainer}>
-            <Text style={styles.optionLabel}>{healingLabel}</Text>
-            <Text style={styles.optionDescription}>{healingDesc}</Text>
+            <Text style={styles.optionLabel}>{mentalHealthLabel}</Text>
+            <Text style={styles.optionDescription}>{mentalHealthDesc}</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.optionCard, messageStreams.includes('community') && styles.optionCardSelected]}
-          onPress={() => toggleMessageStream('community')}
+          style={[styles.optionCard, messageStreams.includes('veteran') && styles.optionCardSelected]}
+          onPress={() => toggleMessageStream('veteran')}
         >
           <IconSymbol
-            ios_icon_name="person.3.fill"
-            android_material_icon_name="group"
+            ios_icon_name="shield.lefthalf.filled"
+            android_material_icon_name="military-tech"
             size={32}
-            color={messageStreams.includes('community') ? colors.accent : colors.text}
+            color={messageStreams.includes('veteran') ? colors.accent : colors.text}
           />
           <View style={styles.optionTextContainer}>
-            <Text style={styles.optionLabel}>{communityLabel}</Text>
-            <Text style={styles.optionDescription}>{communityDesc}</Text>
+            <Text style={styles.optionLabel}>{veteranLabel}</Text>
+            <Text style={styles.optionDescription}>{veteranDesc}</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.optionCard, messageStreams.includes('gratitude') && styles.optionCardSelected]}
-          onPress={() => toggleMessageStream('gratitude')}
+          style={[styles.optionCard, messageStreams.includes('faith') && styles.optionCardSelected]}
+          onPress={() => toggleMessageStream('faith')}
         >
           <IconSymbol
-            ios_icon_name="star.fill"
-            android_material_icon_name="star"
+            ios_icon_name="sparkles"
+            android_material_icon_name="auto-awesome"
             size={32}
-            color={messageStreams.includes('gratitude') ? colors.accent : colors.text}
+            color={messageStreams.includes('faith') ? colors.accent : colors.text}
           />
           <View style={styles.optionTextContainer}>
-            <Text style={styles.optionLabel}>{gratitudeLabel}</Text>
-            <Text style={styles.optionDescription}>{gratitudeDesc}</Text>
+            <Text style={styles.optionLabel}>{faithLabel}</Text>
+            <Text style={styles.optionDescription}>{faithDesc}</Text>
           </View>
         </TouchableOpacity>
 

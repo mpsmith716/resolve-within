@@ -3,7 +3,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Platform } from "react-native";
 import * as Linking from "expo-linking";
 import { authClient, setBearerToken, clearAuthTokens } from "@/lib/auth";
-import { useRouter } from "expo-router";
+import { authenticatedGet } from "@/utils/api";
+import { safeGetItem, safeSetItem } from "@/utils/safeStorage";
 
 interface User {
   id: string;
@@ -16,8 +17,20 @@ interface User {
   };
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  name?: string;
+  userType?: string | null;
+  notificationTime?: string | null;
+  messageStreams?: string[] | null;
+  first_name?: string;
+  username?: string;
+}
+
 interface AuthContextType {
   user: User | null;
+  profile: UserProfile | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name?: string) => Promise<void>;
@@ -26,6 +39,8 @@ interface AuthContextType {
   signInWithGitHub: () => Promise<void>;
   signOut: () => Promise<void>;
   fetchUser: () => Promise<void>;
+  refreshProfile: () => Promise<UserProfile | null>;
+  needsOnboarding: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,6 +90,7 @@ function openOAuthPopup(provider: string): Promise<string> {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -107,9 +123,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("[Auth] Syncing bearer token to storage");
           await setBearerToken(session.data.session.token);
         }
+
+        // Load profile for onboarding / preferences (best-effort)
+        try {
+          const data = await authenticatedGet<UserProfile>("/api/user/profile");
+          setProfile(data);
+        } catch (profileError: any) {
+          console.warn("[Auth] Profile fetch skipped:", profileError?.message || profileError);
+        }
       } else {
         console.log("[Auth] No active session found");
         setUser(null);
+        setProfile(null);
         await clearAuthTokens();
       }
     } catch (error: any) {
@@ -124,6 +149,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const refreshProfile = async (): Promise<UserProfile | null> => {
+    try {
+      console.log("[Auth] Fetching user profile...");
+      const data = await authenticatedGet<UserProfile>("/api/user/profile");
+      setProfile(data);
+      if (data?.userType) {
+        await safeSetItem("onboarding_completed", "true");
+      }
+      return data;
+    } catch (error: any) {
+      console.warn("[Auth] Failed to fetch profile:", error?.message || error);
+      return null;
+    }
+  };
+
+  const needsOnboarding = async (): Promise<boolean> => {
+    const localDone = await safeGetItem("onboarding_completed");
+    if (localDone === "true") {
+      return false;
+    }
+    const current = profile ?? (await refreshProfile());
+    if (current?.userType) {
+      await safeSetItem("onboarding_completed", "true");
+      return false;
+    }
+    return true;
   };
 
   const signInWithEmail = async (email: string, password: string) => {
@@ -205,6 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Always clear local state, even if API call fails
       console.log("[Auth] Clearing local auth state");
       setUser(null);
+      setProfile(null);
       try {
         await clearAuthTokens();
       } catch (tokenError: any) {
@@ -217,6 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        profile,
         loading,
         signInWithEmail,
         signUpWithEmail,
@@ -225,6 +280,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGitHub,
         signOut,
         fetchUser,
+        refreshProfile,
+        needsOnboarding,
       }}
     >
       {children}
@@ -253,6 +310,7 @@ export function useAuth(): AuthContextType {
     // Return safe defaults instead of throwing
     return {
       user: null,
+      profile: null,
       loading: false,
       signInWithEmail: async () => {
         console.error("[Auth] signInWithEmail called outside AuthProvider");
@@ -275,6 +333,11 @@ export function useAuth(): AuthContextType {
       fetchUser: async () => {
         console.error("[Auth] fetchUser called outside AuthProvider");
       },
+      refreshProfile: async () => {
+        console.error("[Auth] refreshProfile called outside AuthProvider");
+        return null;
+      },
+      needsOnboarding: async () => false,
     };
   }
   
