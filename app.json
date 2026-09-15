@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Natively",
+      "bundleIdentifier": "com.cypherwavestudios.resolvewithin",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSUserNotificationsUsageDescription": "Resolve Within may send gentle reminders to help you pause, breathe, or check in during the day.",
@@ -26,8 +26,7 @@
         "foregroundImage": "./assets/images/app-icon-nkg.png",
         "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Natively",
+      "package": "com.cypherwavestudios.resolvewithin",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
       ]
@@ -58,7 +57,11 @@
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev"
-    }
+      "backendUrl": "https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev",
+      "eas": {
+        "projectId": "1ab9b6ed-f00e-494c-813d-4b9d0d1e998f"
+      }
+    },
+    "owner": "mpsmith716"
   }
 }

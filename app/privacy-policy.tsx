@@ -59,7 +59,7 @@ export default function PrivacyPolicyScreen() {
   const dataStorageText = 'Some information may be stored locally on your device for app functionality. Future versions may optionally store data securely in cloud services to enable features like data sync across devices.';
 
   const dataDeletionTitle = 'Data Deletion';
-  const dataDeletionText = 'Users can delete journal entries and personal information within the app at any time. Future versions may include comprehensive account and data deletion features.';
+  const dataDeletionText = 'Users can use Delete My Data in the app to permanently remove journal entries, mood history, community posts and reactions, favorites, breathing history, and preferences from Resolve Within servers and this device. The login account itself is retained so you can sign in again later; full account closure may be offered in a future version. Limited moderation audit metadata (for example, that a report existed) may be retained in anonymized or integrity-preserving form. After a successful deletion you are signed out.';
 
   const thirdPartyTitle = 'Third-Party Services';
   const thirdPartyText = 'The app may use third-party services for:';

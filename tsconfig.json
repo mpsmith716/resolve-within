@@ -15,9 +15,15 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
-    "workbox-config.js",
+    "workbox-config.js"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "android",
+    "ios",
+    "dist",
+    "utils/polyfills",
+    "backend/tests",
+    "backend/node_modules"
   ]
 }

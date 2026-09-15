@@ -75,7 +75,7 @@ export function registerMessagesRoutes(app: App) {
           const [userProfile] = await db.select().from(user).where(eq(user.id, session.user.id));
           if (userProfile?.messageStreams) {
             const messageStreams = userProfile.messageStreams as any[];
-            availableMessages = messages.filter((m) => messageStreams.includes(m.stream));
+            availableMessages = messages.filter((m: { stream: string }) => messageStreams.includes(m.stream));
             app.logger.info({ userId: session.user.id, streamCount: availableMessages.length }, "Filtered messages by user streams");
           }
         }

@@ -1,6 +1,15 @@
 import type { App } from "../index.js";
 import { user } from "../db/schema/auth-schema.js";
-import { journalEntries, postInteractions, communityPosts } from "../db/schema/schema.js";
+import {
+  journalEntries,
+  postInteractions,
+  communityPosts,
+  breathingSessions,
+  favoriteExercises,
+  spotlightNominations,
+  spotlightVotes,
+  reportedPosts,
+} from "../db/schema/schema.js";
 import { eq } from "drizzle-orm";
 import type { FastifyRequest, FastifyReply } from "fastify";
 
@@ -246,7 +255,7 @@ export function registerUserRoutes(app: App) {
     "/api/user/data",
     {
       schema: {
-        description: "Delete all user data (journal entries, posts, interactions)",
+        description: "Delete V1 user-owned data (journal, community content, preferences content; retain account + moderation audit as documented)",
         tags: ["user"],
         response: {
           200: {
@@ -275,9 +284,27 @@ export function registerUserRoutes(app: App) {
       app.logger.info({ userId }, "Starting user data deletion");
 
       try {
-        // Delete in a transaction to ensure all-or-nothing
-        await db.transaction(async (tx) => {
-          // Delete post interactions (by userId)
+        // V1 deletion contract: wipe user-owned content + reset preference fields.
+        // Account row is retained (not full account deletion). Moderation audit:
+        // - reported_posts filed by this user: notes cleared; reporter retained for integrity
+        // - admin_actions rows retained for audit trail
+        // - community posts authored by user are deleted (cascades related reports on those posts)
+        await db.transaction(async (tx: typeof db) => {
+          const deletedVotes = await tx
+            .delete(spotlightVotes)
+            .where(eq(spotlightVotes.voterId, userId))
+            .returning();
+          app.logger.info({ userId, count: deletedVotes.length }, "Deleted spotlight votes");
+
+          const deletedNominations = await tx
+            .delete(spotlightNominations)
+            .where(eq(spotlightNominations.nominatorId, userId))
+            .returning();
+          app.logger.info(
+            { userId, count: deletedNominations.length },
+            "Deleted spotlight nominations"
+          );
+
           const deletedInteractions = await tx
             .delete(postInteractions)
             .where(eq(postInteractions.userId, userId))
@@ -287,7 +314,6 @@ export function registerUserRoutes(app: App) {
             "Deleted post interactions"
           );
 
-          // Delete community posts (by authorId)
           const deletedPosts = await tx
             .delete(communityPosts)
             .where(eq(communityPosts.authorId, userId))
@@ -297,7 +323,6 @@ export function registerUserRoutes(app: App) {
             "Deleted community posts"
           );
 
-          // Delete journal entries (by userId)
           const deletedEntries = await tx
             .delete(journalEntries)
             .where(eq(journalEntries.userId, userId))
@@ -306,6 +331,50 @@ export function registerUserRoutes(app: App) {
             { userId, count: deletedEntries.length },
             "Deleted journal entries"
           );
+
+          const deletedBreathing = await tx
+            .delete(breathingSessions)
+            .where(eq(breathingSessions.userId, userId))
+            .returning();
+          app.logger.info(
+            { userId, count: deletedBreathing.length },
+            "Deleted breathing sessions"
+          );
+
+          const deletedFavorites = await tx
+            .delete(favoriteExercises)
+            .where(eq(favoriteExercises.userId, userId))
+            .returning();
+          app.logger.info(
+            { userId, count: deletedFavorites.length },
+            "Deleted favorite exercises"
+          );
+
+          // Clear personal notes on reports filed by this user; keep row for moderation integrity
+          const anonymizedReports = await tx
+            .update(reportedPosts)
+            .set({ notes: null })
+            .where(eq(reportedPosts.reporterUserId, userId))
+            .returning();
+          app.logger.info(
+            { userId, count: anonymizedReports.length },
+            "Anonymized report notes filed by user"
+          );
+
+          // Reset preference fields only; account identity (id/email/name) retained for sign-in
+          await tx
+            .update(user)
+            .set({
+              userType: null,
+              notificationTime: "09:00",
+              messageStreams: ["mental_health"],
+              disclaimerAcceptedAt: null,
+              badgeTier: null,
+              showBadge: true,
+              updatedAt: new Date(),
+            })
+            .where(eq(user.id, userId));
+          app.logger.info({ userId }, "Reset user preference fields");
         });
 
         app.logger.info({ userId }, "User data deletion completed successfully");

@@ -231,7 +231,7 @@ export default function GroundingTechniqueScreen() {
             <View style={styles.iconContainer}>
               <IconSymbol
                 ios_icon_name={technique.icon}
-                android_material_icon_name={technique.iconMaterial}
+                android_material_icon_name={technique.iconMaterial as any}
                 size={48}
                 color={colors.accent}
               />
