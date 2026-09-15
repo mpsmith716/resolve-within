@@ -1,5 +1,5 @@
 // Global error logging for runtime errors
-// Captures console.log/warn/error and sends to Newly server for AI debugging
+// Captures console.log/warn/error and sends to local Metro log server for debugging
 
 import { Platform } from "react-native";
 import Constants from "expo-constants";
@@ -54,7 +54,7 @@ const getLogServerUrl = (): string | null => {
   try {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       // For web, use the current origin
-      cachedLogServerUrl = `${window.location.origin}/natively-logs`;
+      cachedLogServerUrl = `${window.location.origin}/app-logs`;
     } else {
       // For native, try to get the Expo dev server URL
       // experienceUrl format: exp://xxx.ngrok.io/... or exp://192.168.1.1:8081/...
@@ -70,13 +70,13 @@ const getLogServerUrl = (): string | null => {
           baseUrl = baseUrl.replace('https://', 'http://');
         }
 
-        cachedLogServerUrl = `${baseUrl}/natively-logs`;
+        cachedLogServerUrl = `${baseUrl}/app-logs`;
       } else {
         // Fallback: try to use manifest hostUri
         const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.hostUri;
         if (hostUri) {
           const protocol = hostUri.includes('ngrok') || hostUri.includes('.io') ? 'https' : 'http';
-          cachedLogServerUrl = `${protocol}://${hostUri.split('/')[0]}/natively-logs`;
+          cachedLogServerUrl = `${protocol}://${hostUri.split('/')[0]}/app-logs`;
         }
       }
     }
@@ -117,7 +117,7 @@ const flushLogs = async () => {
           fetchErrorLogged = true;
           // Use a different method to avoid recursion - write directly without going through our intercept
           if (typeof window !== 'undefined' && window.console) {
-            (window.console as any).__proto__.log.call(console, '[Newly] Fetch error (will not repeat):', e.message || e);
+            (window.console as any).__proto__.log.call(console, '[App] Fetch error (will not repeat):', e.message || e);
           }
         }
       });
@@ -300,9 +300,9 @@ export const setupErrorLogging = () => {
 
   // Log initialization info using original console (not intercepted)
   const logServerUrl = getLogServerUrl();
-  originalConsoleLog('[Newly] Setting up error logging...');
-  originalConsoleLog('[Newly] Log server URL:', logServerUrl || 'NOT AVAILABLE');
-  originalConsoleLog('[Newly] Platform:', Platform.OS);
+  originalConsoleLog('[App] Setting up error logging...');
+  originalConsoleLog('[App] Log server URL:', logServerUrl || 'NOT AVAILABLE');
+  originalConsoleLog('[App] Platform:', Platform.OS);
 
   // Override console.log to capture and send to server
   console.log = (...args: any[]) => {

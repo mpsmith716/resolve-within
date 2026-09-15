@@ -26,8 +26,6 @@ interface UserProfile {
   userType: string;
   notificationTime: string;
   messageStreams: string[];
-  badgeTier: string | null;
-  showBadge: boolean;
 }
 
 interface JournalTrends {
@@ -79,10 +77,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.accent,
     fontWeight: '600',
-  },
-  badge: {
-    fontSize: 32,
-    marginTop: 8,
   },
   section: {
     marginHorizontal: 20,
@@ -299,17 +293,6 @@ export default function ProfileScreen() {
     }
   }
 
-  function getBadgeEmoji(tier: string | null): string {
-    if (!tier) return '';
-    const badges: Record<string, string> = {
-      bronze: '🥉',
-      silver: '🥈',
-      gold: '🥇',
-      platinum: '💎',
-    };
-    return badges[tier.toLowerCase()] || '';
-  }
-
   function getUserTypeLabel(type: string): string {
     const labels: Record<string, string> = {
       veteran: 'Veteran',
@@ -333,8 +316,6 @@ export default function ProfileScreen() {
   const userName = profile?.name || 'User';
   const userEmail = profile?.email || '';
   const userTypeLabel = profile ? getUserTypeLabel(profile.userType) : '';
-  const badgeEmoji = profile ? getBadgeEmoji(profile.badgeTier) : '';
-  const showBadgeDisplay = profile?.showBadge && badgeEmoji;
 
   const streakValue = trends?.streak?.toString() || '0';
   const totalEntriesValue = trends?.totalEntries?.toString() || '0';
@@ -367,7 +348,6 @@ export default function ProfileScreen() {
             <Text style={styles.name}>{userName}</Text>
             <Text style={styles.email}>{userEmail}</Text>
             <Text style={styles.userType}>{userTypeLabel}</Text>
-            {showBadgeDisplay && <Text style={styles.badge}>{badgeEmoji}</Text>}
           </View>
 
           <View style={styles.section}>

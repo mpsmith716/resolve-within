@@ -13,7 +13,7 @@ config.cacheStores = [
   ];
 
 // Custom server middleware to receive console.log messages from the app
-const LOG_FILE_PATH = path.join(__dirname, '.natively', 'app_console.log');
+const LOG_FILE_PATH = path.join(__dirname, '.resolve-within', 'app_console.log');
 const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB
 
 // Ensure log directory exists
@@ -35,8 +35,8 @@ config.server.enhanceMiddleware = (middleware) => {
     const pathname = req.url.split('?')[0];
 
     // Handle log receiving endpoint
-    if (pathname === '/natively-logs' && req.method === 'POST') {
-      console.log('[NATIVELY-LOGS] Received POST request');
+    if (pathname === '/app-logs' && req.method === 'POST') {
+      console.log('[APP-LOGS] Received POST request');
       let body = '';
       req.on('data', chunk => {
         body += chunk.toString();
@@ -54,7 +54,7 @@ config.server.enhanceMiddleware = (middleware) => {
           const sourceInfo = source ? `[${source}] ` : '';
           const logLine = `[${timestamp}] ${platformInfo}[${level}] ${sourceInfo}${message}\n`;
 
-          console.log('[NATIVELY-LOGS] Writing log:', logLine.trim());
+          console.log('[APP-LOGS] Writing log:', logLine.trim());
 
           // Rotate log file if too large
           try {
@@ -75,7 +75,7 @@ config.server.enhanceMiddleware = (middleware) => {
           });
           res.end('{"status":"ok"}');
         } catch (e) {
-          console.error('[NATIVELY-LOGS] Error processing log:', e.message);
+          console.error('[APP-LOGS] Error processing log:', e.message);
           res.writeHead(500, {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
@@ -87,8 +87,8 @@ config.server.enhanceMiddleware = (middleware) => {
     }
 
     // Handle CORS preflight for log endpoint
-    if (pathname === '/natively-logs' && req.method === 'OPTIONS') {
-      console.log('[NATIVELY-LOGS] Received OPTIONS preflight request');
+    if (pathname === '/app-logs' && req.method === 'OPTIONS') {
+      console.log('[APP-LOGS] Received OPTIONS preflight request');
       res.writeHead(200, {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',

@@ -191,7 +191,7 @@ const message = safeGetTodayMessage();
 
 **Features**:
 - Intercepts `console.log`, `console.warn`, `console.error`
-- Sends logs to Natively server for AI debugging
+- Sends logs to local Metro log server for debugging
 - Mutes noisy warnings (e.g., key prop warnings)
 - Batches logs to reduce network requests
 - Extracts source location from stack traces

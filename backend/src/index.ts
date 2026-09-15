@@ -32,31 +32,37 @@ type AppWithAuth = App & { auth: any };
 // Enable authentication with Better Auth
 app.withAuth();
 
-// Seed reviewer account on startup
+// Optionally seed reviewer account when REVIEWER_EMAIL + REVIEWER_PASSWORD are set (no default secrets)
 {
-  const db = app.db;
-  const appWithAuth = app as AppWithAuth;
-  try {
-    const [existingReviewer] = await db
-      .select()
-      .from(user)
-      .where(eq(user.email, 'review@resolvewithin.com'));
+  const reviewerEmail = process.env.REVIEWER_EMAIL;
+  const reviewerPassword = process.env.REVIEWER_PASSWORD;
+  if (reviewerEmail && reviewerPassword) {
+    const db = app.db;
+    const appWithAuth = app as AppWithAuth;
+    try {
+      const [existingReviewer] = await db
+        .select()
+        .from(user)
+        .where(eq(user.email, reviewerEmail));
 
-    if (!existingReviewer) {
-      app.logger.info({}, '[seed] Creating reviewer account');
-      await appWithAuth.auth.api.signUpEmail({
-        body: {
-          email: 'review@resolvewithin.com',
-          password: 'Resolve123',
-          name: 'App Reviewer',
-        },
-      });
-      app.logger.info({}, '[seed] Reviewer account created');
-    } else {
-      app.logger.info({}, '[seed] Reviewer account already exists');
+      if (!existingReviewer) {
+        app.logger.info({}, '[seed] Creating reviewer account from env');
+        await appWithAuth.auth.api.signUpEmail({
+          body: {
+            email: reviewerEmail,
+            password: reviewerPassword,
+            name: process.env.REVIEWER_NAME || 'App Reviewer',
+          },
+        });
+        app.logger.info({}, '[seed] Reviewer account created');
+      } else {
+        app.logger.info({}, '[seed] Reviewer account already exists');
+      }
+    } catch (error) {
+      app.logger.error({ err: error }, '[seed] Failed to seed reviewer account - continuing startup');
     }
-  } catch (error) {
-    app.logger.error({ err: error }, '[seed] Failed to seed reviewer account - continuing startup');
+  } else {
+    app.logger.info({}, '[seed] Skipping reviewer seed (REVIEWER_EMAIL/REVIEWER_PASSWORD not set)');
   }
 }
 

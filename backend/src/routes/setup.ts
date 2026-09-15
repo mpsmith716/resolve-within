@@ -11,12 +11,12 @@ export function registerSetupRoutes(app: App) {
   const db = app.db;
   const appWithAuth = app as AppWithAuth;
 
-  // POST /api/setup/create-reviewer - Create a test reviewer account (one-time setup)
+  // POST /api/setup/create-reviewer - Create a test reviewer account (env-gated; no default secrets)
   app.fastify.post(
     "/api/setup/create-reviewer",
     {
       schema: {
-        description: "Create a test reviewer account (one-time setup endpoint)",
+        description: "Create a test reviewer account (requires REVIEWER_EMAIL and REVIEWER_PASSWORD env vars)",
         tags: ["setup"],
         response: {
           200: {
@@ -31,6 +31,10 @@ export function registerSetupRoutes(app: App) {
             type: "object",
             properties: { error: { type: "string" } },
           },
+          503: {
+            type: "object",
+            properties: { error: { type: "string" } },
+          },
           500: {
             type: "object",
             properties: { error: { type: "string" } },
@@ -39,14 +43,19 @@ export function registerSetupRoutes(app: App) {
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const reviewerEmail = "review@resolvewithin.com";
-      const reviewerPassword = "Resolve123";
-      const reviewerName = "App Reviewer";
+      const reviewerEmail = process.env.REVIEWER_EMAIL;
+      const reviewerPassword = process.env.REVIEWER_PASSWORD;
+      const reviewerName = process.env.REVIEWER_NAME || "App Reviewer";
+
+      if (!reviewerEmail || !reviewerPassword) {
+        app.logger.warn({}, "Reviewer setup skipped: REVIEWER_EMAIL/REVIEWER_PASSWORD not configured");
+        reply.code(503);
+        return { error: "Reviewer setup is not configured" };
+      }
 
       app.logger.info({ email: reviewerEmail }, "Checking if reviewer account exists");
 
       try {
-        // Check if reviewer account already exists
         const [existingUser] = await db
           .select()
           .from(user)
@@ -60,7 +69,6 @@ export function registerSetupRoutes(app: App) {
           };
         }
 
-        // Create the reviewer account using Better Auth server-side API
         app.logger.info({ email: reviewerEmail }, "Creating reviewer account");
 
         const result = await appWithAuth.auth.api.signUpEmail({
@@ -82,7 +90,7 @@ export function registerSetupRoutes(app: App) {
         return {
           created: true,
         };
-      } catch (error) {
+      } catch (error: unknown) {
         if (error instanceof APIError) {
           app.logger.error({ email: reviewerEmail, err: error.message }, "API error creating reviewer account");
           reply.code(error.statusCode || 400);
