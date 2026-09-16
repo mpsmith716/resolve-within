@@ -1,14 +1,13 @@
 
-import Constants from "expo-constants";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { BEARER_TOKEN_KEY } from "@/lib/auth";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 
 /**
- * Backend URL is configured in app.json under expo.extra.backendUrl
- * It is set automatically when the backend is deployed
+ * Backend URL — same shared resolution as auth (env → extra → Specular default)
  */
-export const BACKEND_URL = Constants.expoConfig?.extra?.backendUrl || "";
+export const BACKEND_URL = API_BASE_URL;
 
 /**
  * Check if backend is properly configured

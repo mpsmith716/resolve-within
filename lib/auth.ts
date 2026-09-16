@@ -2,9 +2,9 @@ import { createAuthClient } from "better-auth/react";
 import { expoClient } from "@better-auth/expo/client";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
-import Constants from "expo-constants";
+import { API_BASE_URL } from "./apiBaseUrl";
 
-const API_URL = "https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev";
+const API_URL = API_BASE_URL;
 
 export const BEARER_TOKEN_KEY = "mental-reset_bearer_token";
 
