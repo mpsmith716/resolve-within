@@ -1,4 +1,5 @@
 import { createApplication } from "@specific-dev/framework";
+import { expo } from "@better-auth/expo";
 import * as appSchema from './db/schema/schema.js';
 import * as authSchema from './db/schema/auth-schema.js';
 import { eq } from 'drizzle-orm';
@@ -30,8 +31,17 @@ export type App = typeof app;
 // Type assertion for app.auth (available after app.withAuth() is called)
 type AppWithAuth = App & { auth: any };
 
-// Enable authentication with Better Auth
-app.withAuth();
+// Enable authentication with Better Auth (Expo / native trusted origins)
+app.withAuth({
+  trustedOrigins: [
+    "resolvewithin://",
+    "resolvewithin://*",
+    "exp://",
+    "exp://**",
+    "exp://192.168.*.*:*/**",
+  ],
+  plugins: [expo()],
+});
 
 // Optionally seed reviewer account when REVIEWER_EMAIL + REVIEWER_PASSWORD are set (no default secrets)
 {
