@@ -24,6 +24,8 @@
     "dist",
     "utils/polyfills",
     "backend/tests",
-    "backend/node_modules"
+    "backend/node_modules",
+    "**/*.test.ts",
+    "lib/authHeaders.test.ts"
   ]
 }
