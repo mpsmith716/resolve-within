@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Platform } from "react-native";
 import * as Linking from "expo-linking";
 import { authClient, setBearerToken, clearAuthTokens } from "@/lib/auth";
+import { extractSessionToken } from "@/lib/authHeaders";
 import { authenticatedGet } from "@/utils/api";
 import { safeGetItem, safeSetItem } from "@/utils/safeStorage";
 
@@ -39,7 +40,7 @@ interface AuthContextType {
   signInWithApple: () => Promise<void>;
   signInWithGitHub: () => Promise<void>;
   signOut: () => Promise<void>;
-  fetchUser: () => Promise<void>;
+  fetchUser: () => Promise<User | null>;
   refreshProfile: () => Promise<UserProfile | null>;
   needsOnboarding: () => Promise<boolean>;
 }
@@ -109,20 +110,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const fetchUser = async () => {
+  const fetchUser = async (): Promise<User | null> => {
     try {
       setLoading(true);
       console.log("[Auth] Fetching user session from Better Auth...");
       const session = await authClient.getSession();
-      
+
+      if (session?.error) {
+        console.warn("[Auth] getSession error:", session.error.message || session.error);
+      }
+
       if (session?.data?.user) {
         console.log("[Auth] User session found:", session.data.user.email);
-        setUser(session.data.user as User);
-        
-        // Sync token to SecureStore/localStorage for utils/api.ts
-        if (session.data.session?.token) {
+        const nextUser = session.data.user as User;
+        setUser(nextUser);
+
+        // Sync token to SecureStore/localStorage for utils/api.ts + authClient Bearer
+        const sessionToken = extractSessionToken(session.data) ?? session.data.session?.token;
+        if (sessionToken) {
           console.log("[Auth] Syncing bearer token to storage");
-          await setBearerToken(session.data.session.token);
+          await setBearerToken(sessionToken);
         }
 
         // Load profile for onboarding / preferences (best-effort)
@@ -132,21 +139,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (profileError: any) {
           console.warn("[Auth] Profile fetch skipped:", profileError?.message || profileError);
         }
-      } else {
-        console.log("[Auth] No active session found");
+
+        return nextUser;
+      }
+
+      console.log("[Auth] No active session found");
+      setUser(null);
+      setProfile(null);
+      await clearAuthTokens();
+      return null;
+    } catch (error: any) {
+      console.error("[Auth] Failed to fetch user session:", error?.message || error);
+
+      if (error?.message?.includes("401") || error?.status === 401) {
+        console.log("[Auth] 401 detected, clearing tokens");
         setUser(null);
         setProfile(null);
         await clearAuthTokens();
       }
-    } catch (error: any) {
-      console.error("[Auth] Failed to fetch user session:", error?.message || error);
-      
-      // If we get a 401, clear tokens and redirect to auth
-      if (error?.message?.includes("401") || error?.status === 401) {
-        console.log("[Auth] 401 detected, clearing tokens and redirecting to auth");
-        setUser(null);
-        await clearAuthTokens();
-      }
+      return null;
     } finally {
       setLoading(false);
     }
@@ -180,21 +191,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  const establishSessionAfterCredentialAuth = async (
+    result: { data?: unknown; error?: { message?: string } | null },
+    action: "sign-in" | "sign-up"
+  ) => {
+    if (result?.error) {
+      throw new Error(result.error.message || `Unable to ${action}. Please try again.`);
+    }
+
+    const token = extractSessionToken(result?.data);
+    if (token) {
+      console.log(`[Auth] ${action} returned session token, saving for Bearer + API`);
+      await setBearerToken(token);
+    }
+
+    const user = await fetchUser();
+    if (!user) {
+      // Do not proceed as logged-in if session/token establishment failed
+      await clearAuthTokens();
+      throw new Error(
+        `Signed ${action === "sign-in" ? "in" : "up"} but session was not established. Please try again.`
+      );
+    }
+  };
+
   const signInWithEmail = async (email: string, password: string) => {
     try {
       console.log("[Auth] Signing in with email:", email);
       const result = await authClient.signIn.email({ email, password });
-      
-      // better-auth email sign-in returns token on data (not data.session)
-      const loginToken =
-        (result?.data as { token?: string } | undefined)?.token ??
-        (result?.data as { session?: { token?: string } } | undefined)?.session?.token;
-      if (loginToken) {
-        console.log("[Auth] Login successful, saving token");
-        await setBearerToken(loginToken);
-      }
-      
-      await fetchUser();
+      await establishSessionAfterCredentialAuth(result, "sign-in");
     } catch (error: any) {
       console.error("[Auth] Email sign in failed:", error?.message || error);
       throw error;
@@ -209,17 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
         name: name ?? "",
       });
-      
-      // better-auth email sign-up returns token on data when session is created
-      const signupToken =
-        (result?.data as { token?: string | null } | undefined)?.token ??
-        (result?.data as { session?: { token?: string } } | undefined)?.session?.token;
-      if (signupToken) {
-        console.log("[Auth] Signup successful, saving token");
-        await setBearerToken(signupToken);
-      }
-      
-      await fetchUser();
+      await establishSessionAfterCredentialAuth(result, "sign-up");
     } catch (error: any) {
       console.error("[Auth] Email sign up failed:", error?.message || error);
       throw error;
@@ -233,7 +248,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (Platform.OS === "web") {
         const token = await openOAuthPopup(provider);
         await setBearerToken(token);
-        await fetchUser();
+        const user = await fetchUser();
+        if (!user) {
+          await clearAuthTokens();
+          throw new Error("Signed in but session was not established. Please try again.");
+        }
       } else {
         // Native: Use expo-linking to generate a proper deep link
         const callbackURL = Linking.createURL("auth-callback");
@@ -339,6 +358,7 @@ export function useAuth(): AuthContextType {
       },
       fetchUser: async () => {
         console.error("[Auth] fetchUser called outside AuthProvider");
+        return null;
       },
       refreshProfile: async () => {
         console.error("[Auth] refreshProfile called outside AuthProvider");

@@ -1,8 +1,10 @@
-
 import { Platform } from "react-native";
-import * as SecureStore from "expo-secure-store";
-import { BEARER_TOKEN_KEY } from "@/lib/auth";
+import { getAuthCookie, getBearerToken } from "@/lib/auth";
 import { API_BASE_URL } from "@/lib/apiBaseUrl";
+import {
+  buildAuthenticatedHeaders,
+  hasAuthCredential,
+} from "@/lib/authHeaders";
 
 /**
  * Backend URL — same shared resolution as auth (env → extra → Specular default)
@@ -17,34 +19,17 @@ export const isBackendConfigured = (): boolean => {
 };
 
 /**
- * Get bearer token from platform-specific storage
- * Web: localStorage
- * Native: SecureStore
- *
- * @returns Bearer token or null if not found
- */
-export const getBearerToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS === "web") {
-      return localStorage.getItem(BEARER_TOKEN_KEY);
-    } else {
-      return await SecureStore.getItemAsync(BEARER_TOKEN_KEY);
-    }
-  } catch (error) {
-    console.warn("[API] Error retrieving bearer token:", error);
-    return null;
-  }
-};
-
-/**
  * Redact sensitive headers for logging
  */
 const redactHeaders = (headers: any): any => {
   if (!headers) return headers;
-  
+
   const redacted = { ...headers };
   if (redacted.Authorization) {
     redacted.Authorization = "Bearer [REDACTED]";
+  }
+  if (redacted.Cookie) {
+    redacted.Cookie = "[REDACTED COOKIE]";
   }
   return redacted;
 };
@@ -67,19 +52,20 @@ export const apiCall = async <T = any>(
 
   const url = `${BACKEND_URL}${endpoint}`;
   const method = options?.method || "GET";
-  
+
   console.log(`[API] ${method} ${endpoint}`);
 
   try {
     const fetchOptions: RequestInit = {
       ...options,
+      // Avoid interfering with manually attached Cookie (Expo docs).
+      credentials: options?.credentials ?? (Platform.OS === "web" ? "include" : "omit"),
       headers: {
         "Content-Type": "application/json",
         ...options?.headers,
       },
     };
 
-    // Log headers (redacted)
     console.log("[API] Headers:", redactHeaders(fetchOptions.headers));
 
     const response = await fetch(url, fetchOptions);
@@ -87,12 +73,11 @@ export const apiCall = async <T = any>(
     if (!response.ok) {
       const text = await response.text();
       console.warn(`[API] ${method} ${endpoint} - ${response.status}:`, text);
-      
-      // If 401, the token is invalid or expired
+
       if (response.status === 401) {
-        console.warn("[API] 401 Unauthorized - Token may be invalid or expired");
+        console.warn("[API] 401 Unauthorized - session/token may be missing or expired");
       }
-      
+
       throw new Error(`API error: ${response.status} - ${text}`);
     }
 
@@ -163,31 +148,31 @@ export const apiDelete = async <T = any>(endpoint: string, data: any = {}): Prom
 };
 
 /**
- * Authenticated API call helper
- * Automatically retrieves bearer token from storage and adds to Authorization header
- *
- * @param endpoint - API endpoint path
- * @param options - Fetch options (method, headers, body, etc.)
- * @returns Parsed JSON response
- * @throws Error if token not found or request fails
+ * Authenticated API call helper.
+ * Uses expoClient Cookie (documented) and Bearer session token when present.
  */
 export const authenticatedApiCall = async <T = any>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> => {
   const token = await getBearerToken();
+  const cookie = getAuthCookie();
 
-  if (!token) {
-    console.warn("[API] No bearer token found - user must sign in first");
+  const headers = buildAuthenticatedHeaders({
+    cookie,
+    bearerToken: token,
+    extra: options?.headers as Record<string, string> | undefined,
+  });
+
+  if (!hasAuthCredential(headers)) {
+    console.warn("[API] No bearer token or auth cookie found - user must sign in first");
     throw new Error("Authentication token not found. Please sign in.");
   }
 
   return apiCall<T>(endpoint, {
     ...options,
-    headers: {
-      ...options?.headers,
-      Authorization: `Bearer ${token}`,
-    },
+    credentials: "omit",
+    headers,
   });
 };
 
