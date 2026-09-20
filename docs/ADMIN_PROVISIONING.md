@@ -18,7 +18,7 @@
 
 ## Prerequisites
 
-- Trusted access to the production (or staging) Postgres database used by the Specular / backend deployment
+- Trusted access to the production (or staging) Postgres database used by the **production Render** backend (`https://resolve-within-backend.onrender.com`; Specular host is legacy/rollback only)
   - OR trusted shell/SQL console on the host that already has DB credentials injected
 - Ability to identify the target user’s stable `id` (UUID) and/or verified `email`
 - Confirmation that the target account already exists (user has signed up at least once)

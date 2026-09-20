@@ -57,7 +57,7 @@
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev",
+      "backendUrl": "https://resolve-within-backend.onrender.com",
       "eas": {
         "projectId": "1ab9b6ed-f00e-494c-813d-4b9d0d1e998f"
       }

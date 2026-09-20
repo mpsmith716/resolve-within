@@ -7,7 +7,7 @@ import {
 } from "@/lib/authHeaders";
 
 /**
- * Backend URL — same shared resolution as auth (env → extra → Specular default)
+ * Backend URL — same shared resolution as auth (env → extra → production Render default)
  */
 export const BACKEND_URL = API_BASE_URL;
 
