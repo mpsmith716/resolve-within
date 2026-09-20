@@ -1,14 +1,20 @@
 import Constants from "expo-constants";
 
-/** Specular production fallback — keep in sync with app.json expo.extra.backendUrl */
+/**
+ * Production Render backend — keep in sync with app.json expo.extra.backendUrl.
+ *
+ * Legacy Specular (rollback only, NOT production default):
+ *   https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev
+ * Override via EXPO_PUBLIC_API_URL if you need Specular temporarily.
+ */
 export const DEFAULT_API_URL =
-  "https://bcbpzb8nm7j2wkh7vmms5j4hf6m3be9b.app.specular.dev";
+  "https://resolve-within-backend.onrender.com";
 
 /**
  * Resolve backend API base URL in order:
- * 1) EXPO_PUBLIC_API_URL (non-empty after trim)
+ * 1) EXPO_PUBLIC_API_URL (non-empty after trim) — highest priority (staging / rollback)
  * 2) Constants.expoConfig.extra.backendUrl (non-empty string)
- * 3) DEFAULT_API_URL (Specular)
+ * 3) DEFAULT_API_URL (production Render)
  *
  * Never returns an empty string; throws if somehow all sources are empty.
  */
