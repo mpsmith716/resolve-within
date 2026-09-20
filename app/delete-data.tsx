@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   BackHandler,
+  TextInput,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +19,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import * as SecureStore from 'expo-secure-store';
 import { authenticatedDelete } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { clearAuthTokens } from '@/lib/auth';
 import { clearFavorites } from '@/utils/favorites';
 import { safeDeleteItem } from '@/utils/safeStorage';
 
@@ -100,6 +102,22 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
     fontWeight: '600',
+  },
+  passwordLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  passwordInput: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: 14,
+    fontSize: 16,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    marginBottom: 16,
   },
   modalOverlay: {
     flex: 1,
@@ -204,10 +222,10 @@ export default function DeleteDataScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleClose = useCallback(() => {
     if (router.canGoBack()) {
@@ -226,6 +244,7 @@ export default function DeleteDataScreen() {
   }, [handleClose]);
 
   const dataToDelete = [
+    { icon: 'person.crop.circle', iconMaterial: 'person' as const, label: 'Login Identity & Credentials' },
     { icon: 'edit', iconMaterial: 'edit' as const, label: 'Journal Entries & Mood History' },
     { icon: 'bubble.left', iconMaterial: 'forum' as const, label: 'Community Posts & Reactions' },
     { icon: 'heart', iconMaterial: 'favorite' as const, label: 'Favorites & Breathing Sessions' },
@@ -240,47 +259,56 @@ export default function DeleteDataScreen() {
     setErrorMessage('');
 
     try {
-      // Server-authoritative deletion first — do not claim success if this fails
-      await authenticatedDelete('/api/user/data');
+      // Server-authoritative true account deletion — do not wipe local auth if this fails
+      await authenticatedDelete('/api/user/data', {
+        password: confirmPassword,
+      });
 
-      // Clear local/session-adjacent preference storage after server success
+      // Only after server success: clear local prefs + auth/session, then force auth UI
       await clearLocalUserData();
+      try {
+        await signOut();
+      } catch {
+        try {
+          await clearAuthTokens();
+        } catch {
+          // continue
+        }
+      }
 
       setIsDeleting(false);
-      setShowSuccessModal(true);
-    } catch (error) {
-      console.error('DeleteDataScreen: Deletion failed (no false success)');
+      setConfirmPassword('');
+      // Immediate signed-out UI — never briefly show Home as authenticated
+      router.replace('/auth');
+    } catch (error: any) {
+      console.error('DeleteDataScreen: Deletion failed (no false success)', error?.message || error);
       setIsDeleting(false);
-      setErrorMessage(
-        'We could not delete your data right now. Nothing was marked deleted. Please check your connection and try again.'
-      );
+      const raw = typeof error?.message === 'string' ? error.message : '';
+      let friendly =
+        'We could not delete your account right now. Your account still exists. Please check your connection and try again.';
+      if (raw.includes('Password confirmation') || raw.includes('Incorrect password')) {
+        friendly =
+          'Password confirmation failed. Your account was not deleted. Check your password and try again.';
+      } else if (raw.includes('400')) {
+        friendly =
+          'Deletion could not be confirmed (check your password). Your account was not deleted.';
+      }
+      setErrorMessage(friendly);
       setShowErrorModal(true);
     }
   }
 
-  async function handleSuccessClose() {
-    setShowSuccessModal(false);
-    try {
-      await signOut();
-    } catch {
-      router.replace('/auth');
-    }
-  }
-
-  const titleText = 'Delete My Data';
+  const titleText = 'Delete Account & Data';
   const descriptionText =
-    'This permanently deletes your journal, mood history, community content, favorites, breathing history, and preferences from Resolve Within servers and this device. Your login account remains so you can sign in again later. This cannot be undone.';
+    'This permanently deletes your journal, mood history, community content, favorites, breathing history, preferences, and your login identity from Resolve Within servers and this device. You will not be able to sign in with the same email/password afterward. Signing up again creates a new account. This cannot be undone.';
   const warningText =
-    'Warning: Journal entries, community posts, reactions, favorites, breathing history, and preferences will be permanently removed. Moderation audit records may retain anonymized report metadata. You will be signed out after a successful deletion.';
+    'Warning: Your account identity, journal entries, community posts, reactions, favorites, breathing history, and preferences will be permanently removed. You will be signed out immediately after a successful deletion.';
   const confirmTitle = 'Confirm Deletion';
   const confirmMessage =
-    'Are you sure you want to delete all your personal data? This action cannot be undone.';
-  const successTitle = 'Data Deleted';
-  const successMessage =
-    'Your personal data has been deleted. You will be signed out now.';
+    'Are you sure you want to permanently delete your account and all personal data? Enter your password to confirm. This cannot be undone.';
   const cancelText = 'Cancel';
-  const deleteText = 'Delete All Data';
-  const confirmDeleteText = 'Yes, Delete Everything';
+  const deleteText = 'Delete Account & Data';
+  const confirmDeleteText = 'Yes, Delete My Account';
   const okText = 'OK';
 
   return (
@@ -288,7 +316,7 @@ export default function DeleteDataScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: 'Delete My Data',
+          title: 'Delete Account & Data',
           headerStyle: {
             backgroundColor: colors.background,
           },
@@ -365,6 +393,18 @@ export default function DeleteDataScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{confirmTitle}</Text>
             <Text style={styles.modalMessage}>{confirmMessage}</Text>
+            <Text style={styles.passwordLabel}>Confirm password (required for email/password accounts)</Text>
+            <TextInput
+              style={styles.passwordInput}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="Enter your password"
+              placeholderTextColor={colors.textSecondary}
+              editable={!isDeleting}
+            />
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
@@ -373,8 +413,13 @@ export default function DeleteDataScreen() {
                 <Text style={styles.modalButtonText}>{cancelText}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
+                style={[
+                  styles.modalButton,
+                  styles.modalButtonConfirm,
+                  isDeleting && styles.deleteButtonDisabled,
+                ]}
                 onPress={handleDeleteData}
+                disabled={isDeleting}
               >
                 <Text style={styles.modalButtonText}>{confirmDeleteText}</Text>
               </TouchableOpacity>
@@ -383,32 +428,6 @@ export default function DeleteDataScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={showSuccessModal}
-        transparent
-        animationType="fade"
-        onRequestClose={handleSuccessClose}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <IconSymbol
-              ios_icon_name="checkmark.circle.fill"
-              android_material_icon_name="check-circle"
-              size={64}
-              color={colors.accent}
-              style={styles.successIcon}
-            />
-            <Text style={styles.modalTitle}>{successTitle}</Text>
-            <Text style={styles.modalMessage}>{successMessage}</Text>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonConfirm]}
-              onPress={handleSuccessClose}
-            >
-              <Text style={styles.modalButtonText}>{okText}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       <Modal
         visible={showErrorModal}

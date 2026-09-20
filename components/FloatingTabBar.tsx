@@ -8,7 +8,8 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter, usePathname, useGlobalSearchParams } from 'expo-router';
+import { resolveActiveTabIndex } from '@/components/floatingTabBarActive';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useTheme } from '@react-navigation/native';
@@ -49,32 +50,14 @@ export default function FloatingTabBar({ tabs }: FloatingTabBarProps) {
   const theme = useTheme();
   const { user } = useAuth();
 
-  // Improved active tab detection
-  const getActiveTabIndex = () => {
-    let bestMatch = -1;
-    let bestMatchScore = 0;
+  const searchParams = useGlobalSearchParams<{ tab?: string | string[] }>();
 
-    tabs.forEach((tab, index) => {
-      let score = 0;
-
-      if (pathname === tab.route) {
-        score = 100;
-      } else if (pathname.startsWith(tab.route as string)) {
-        score = 80;
-      } else if (pathname.includes(tab.name)) {
-        score = 60;
-      }
-
-      if (score > bestMatchScore) {
-        bestMatchScore = score;
-        bestMatch = index;
-      }
-    });
-
-    return bestMatch >= 0 ? bestMatch : 0;
-  };
-
-  const activeTabIndex = getActiveTabIndex();
+  // Journal uses ?tab=journal under (home); pathname alone would keep Home active.
+  const activeTabIndex = resolveActiveTabIndex(
+    tabs.map((t) => ({ name: t.name, route: String(t.route) })),
+    pathname,
+    { tab: searchParams.tab }
+  );
 
   const handleTabPress = (tab: TabBarItem) => {
     const isProtected = PROTECTED_TAB_NAMES.includes(tab.name);
@@ -84,6 +67,12 @@ export default function FloatingTabBar({ tabs }: FloatingTabBarProps) {
       const context = TAB_AUTH_CONTEXT[tab.name] ?? tab.name;
       console.log('[Auth Guard] Redirecting unauthenticated user to auth, context:', context);
       router.replace(`/auth?context=${context}` as any);
+      return;
+    }
+
+    // Explicitly clear ?tab=journal when returning to Home (expo-router may retain params).
+    if (tab.name === '(home)') {
+      router.push({ pathname: '/(tabs)/(home)/', params: { tab: 'home' } } as any);
       return;
     }
 

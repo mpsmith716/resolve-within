@@ -473,7 +473,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('ProfileScreen: User tapped Delete My Data');
+                console.log('ProfileScreen: User tapped Delete Account & Data');
                 router.push('/delete-data');
               }}
             >
@@ -483,7 +483,7 @@ export default function ProfileScreen() {
                 size={24}
                 color="#CC0000"
               />
-              <Text style={styles.menuItemText}>Delete My Data</Text>
+              <Text style={styles.menuItemText}>Delete Account & Data</Text>
               <IconSymbol
                 ios_icon_name="chevron.right"
                 android_material_icon_name="arrow-forward"

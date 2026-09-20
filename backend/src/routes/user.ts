@@ -1,5 +1,10 @@
 import type { App } from "../index.js";
-import { user } from "../db/schema/auth-schema.js";
+import {
+  user,
+  session as authSession,
+  account,
+  verification,
+} from "../db/schema/auth-schema.js";
 import {
   journalEntries,
   postInteractions,
@@ -10,13 +15,19 @@ import {
   spotlightVotes,
   reportedPosts,
 } from "../db/schema/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, and, or, like } from "drizzle-orm";
+import { verifyPassword } from "better-auth/crypto";
 import type { FastifyRequest, FastifyReply } from "fastify";
 
 interface UpdatePreferencesBody {
   userType?: string;
   notificationTime?: string;
   messageStreams?: string[];
+}
+
+interface DeleteAccountBody {
+  /** Required for email/password accounts — confirms identity before irreversible deletion. */
+  password?: string;
 }
 
 export function registerUserRoutes(app: App) {
@@ -250,13 +261,23 @@ export function registerUserRoutes(app: App) {
     }
   );
 
-  // DELETE /api/user/data - Delete all user data
-  app.fastify.delete(
+  // DELETE /api/user/data — true account deletion (app data + Better Auth identity)
+  app.fastify.delete<{ Body: DeleteAccountBody }>(
     "/api/user/data",
     {
       schema: {
-        description: "Delete V1 user-owned data (journal, community content, preferences content; retain account + moderation audit as documented)",
+        description:
+          "Permanently delete the authenticated user's app data and Better Auth identity/credentials so the same email/password cannot sign in again",
         tags: ["user"],
+        body: {
+          type: "object",
+          properties: {
+            password: {
+              type: "string",
+              description: "Required for credential (email/password) accounts",
+            },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -264,6 +285,10 @@ export function registerUserRoutes(app: App) {
               success: { type: "boolean" },
               message: { type: "string" },
             },
+          },
+          400: {
+            type: "object",
+            properties: { error: { type: "string" } },
           },
           401: {
             type: "object",
@@ -276,19 +301,43 @@ export function registerUserRoutes(app: App) {
         },
       },
     },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest<{ Body: DeleteAccountBody }>, reply: FastifyReply) => {
       const session = await requireAuth(request, reply);
       if (!session) return;
 
+      // Authority is the authenticated session only — never trust client-supplied userId/email
       const userId = session.user.id;
-      app.logger.info({ userId }, "Starting user data deletion");
+      const email = session.user.email;
+      app.logger.info({ userId }, "Starting true account deletion");
 
       try {
-        // V1 deletion contract: wipe user-owned content + reset preference fields.
-        // Account row is retained (not full account deletion). Moderation audit:
-        // - reported_posts filed by this user: notes cleared; reporter retained for integrity
-        // - admin_actions rows retained for audit trail
-        // - community posts authored by user are deleted (cascades related reports on those posts)
+        const credentialAccounts = await db
+          .select()
+          .from(account)
+          .where(
+            and(eq(account.userId, userId), eq(account.providerId, "credential"))
+          );
+
+        const credentialWithPassword = credentialAccounts.find((a: { password: string | null }) => !!a.password);
+
+        if (credentialWithPassword?.password) {
+          const password = request.body?.password;
+          if (!password || typeof password !== "string") {
+            reply.code(400);
+            return {
+              error: "Password confirmation is required to delete your account",
+            };
+          }
+          const valid = await verifyPassword({
+            hash: credentialWithPassword.password,
+            password,
+          });
+          if (!valid) {
+            reply.code(400);
+            return { error: "Incorrect password. Account was not deleted." };
+          }
+        }
+
         await db.transaction(async (tx: typeof db) => {
           const deletedVotes = await tx
             .delete(spotlightVotes)
@@ -350,43 +399,73 @@ export function registerUserRoutes(app: App) {
             "Deleted favorite exercises"
           );
 
-          // Clear personal notes on reports filed by this user; keep row for moderation integrity
-          const anonymizedReports = await tx
+          // Schema: reporter_user_id is NOT NULL + ON DELETE CASCADE.
+          // Without a nullable-reporter migration, reports filed by this user cannot be retained.
+          // Clear notes then delete rows explicitly before identity removal.
+          await tx
             .update(reportedPosts)
             .set({ notes: null })
+            .where(eq(reportedPosts.reporterUserId, userId));
+          const deletedReports = await tx
+            .delete(reportedPosts)
             .where(eq(reportedPosts.reporterUserId, userId))
             .returning();
           app.logger.info(
-            { userId, count: anonymizedReports.length },
-            "Anonymized report notes filed by user"
+            { userId, count: deletedReports.length },
+            "Deleted reports filed by user (CASCADE-equivalent; see V1_DATA_DELETION.md)"
           );
 
-          // Reset preference fields only; account identity (id/email/name) retained for sign-in
+          // reviewed_by is ON DELETE SET NULL — clear explicitly for clarity
           await tx
-            .update(user)
-            .set({
-              userType: null,
-              notificationTime: "09:00",
-              messageStreams: ["mental_health"],
-              disclaimerAcceptedAt: null,
-              badgeTier: null,
-              showBadge: true,
-              updatedAt: new Date(),
-            })
-            .where(eq(user.id, userId));
-          app.logger.info({ userId }, "Reset user preference fields");
+            .update(reportedPosts)
+            .set({ reviewedBy: null })
+            .where(eq(reportedPosts.reviewedBy, userId));
+
+          // verification has no FK to user — remove email + delete-account tokens
+          const deletedVerification = await tx
+            .delete(verification)
+            .where(
+              or(
+                eq(verification.identifier, email),
+                and(
+                  like(verification.identifier, "delete-account-%"),
+                  eq(verification.value, userId)
+                )
+              )
+            )
+            .returning();
+          app.logger.info(
+            { userId, count: deletedVerification.length },
+            "Deleted verification tokens"
+          );
+
+          const deletedSessions = await tx
+            .delete(authSession)
+            .where(eq(authSession.userId, userId))
+            .returning();
+          app.logger.info({ userId, count: deletedSessions.length }, "Deleted sessions");
+
+          const deletedAccounts = await tx
+            .delete(account)
+            .where(eq(account.userId, userId))
+            .returning();
+          app.logger.info({ userId, count: deletedAccounts.length }, "Deleted accounts/credentials");
+
+          // Identity removal — remaining app FKs CASCADE if any rows remain
+          await tx.delete(user).where(eq(user.id, userId));
+          app.logger.info({ userId }, "Deleted Better Auth user identity");
         });
 
-        app.logger.info({ userId }, "User data deletion completed successfully");
+        app.logger.info({ userId }, "True account deletion completed successfully");
 
         return {
           success: true,
-          message: "All user data deleted successfully",
+          message: "Account and all user data permanently deleted",
         };
       } catch (error) {
-        app.logger.error({ userId, err: error }, "Failed to delete user data");
+        app.logger.error({ userId, err: error }, "Failed to delete account");
         reply.code(500);
-        return { error: "Failed to delete user data" };
+        return { error: "Failed to delete account. Nothing was finalized; please try again." };
       }
     }
   );

@@ -629,15 +629,102 @@ describe("API Integration Tests", () => {
     await expectStatus(res, 403);
   });
 
-  // ============ User Data Deletion ============
-  test("Delete all user data", async () => {
-    const res = await authenticatedApi("/api/user/data", authToken, {
+  // ============ True Account Deletion ============
+  // Uses a disposable user so the shared authToken remains valid for later tests.
+  test("Account deletion - 401 without authentication", async () => {
+    const res = await api("/api/user/data", {
       method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "irrelevant" }),
+    });
+    await expectStatus(res, 401);
+  });
+
+  test("Account deletion - credential user requires password", async () => {
+    const disposable = await signUpTestUser();
+    const res = await authenticatedApi("/api/user/data", disposable.token, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    await expectStatus(res, 400);
+    const data = await res.json();
+    expect(data.error).toMatch(/password/i);
+  });
+
+  test("Account deletion - wrong password does not delete identity", async () => {
+    const disposable = await signUpTestUser();
+    const email = disposable.user.email;
+    const res = await authenticatedApi("/api/user/data", disposable.token, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "WrongPassword!!!999" }),
+    });
+    await expectStatus(res, 400);
+    const data = await res.json();
+    expect(data.error).toMatch(/password|incorrect/i);
+
+    // Identity must still authenticate
+    const signIn = await api("/api/auth/sign-in/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        password: "TestPassword123!",
+      }),
+    });
+    await expectStatus(signIn, 200);
+  });
+
+  test("Account deletion - success removes identity (same email cannot sign in)", async () => {
+    const disposable = await signUpTestUser();
+    const email = disposable.user.email;
+    const password = "TestPassword123!";
+
+    // Seed a journal entry to ensure app-data path runs
+    const journalRes = await authenticatedApi("/api/journal", disposable.token, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mood: "light", content: "delete-me" }),
+    });
+    await expectStatus(journalRes, 201);
+
+    const res = await authenticatedApi("/api/user/data", disposable.token, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
     });
     await expectStatus(res, 200);
     const data = await res.json();
     expect(data.success).toBe(true);
-    expect(data.message).toBeDefined();
+    expect(String(data.message).toLowerCase()).toMatch(/deleted/);
+
+    // Old session must not work
+    const profileRes = await authenticatedApi("/api/user/profile", disposable.token);
+    await expectStatus(profileRes, 401);
+
+    // Same credentials must not restore the deleted account
+    const signIn = await api("/api/auth/sign-in/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    expect([400, 401, 403, 404]).toContain(signIn.status);
+
+    // Fresh signup with same email creates a new identity
+    const resignup = await api("/api/auth/sign-up/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Reborn User",
+        email,
+        password,
+      }),
+    });
+    await expectStatus(resignup, 200);
+    const reborn = await resignup.json();
+    expect(reborn.user.id).toBeDefined();
+    expect(reborn.user.id).not.toBe(disposable.user.id);
   });
 
   // ============ Authentication Tests ============
@@ -677,12 +764,6 @@ describe("API Integration Tests", () => {
     await expectStatus(res, 401);
   });
 
-  test("User data deletion - 401 without authentication", async () => {
-    const res = await api("/api/user/data", {
-      method: "DELETE",
-    });
-    await expectStatus(res, 401);
-  });
 
   test("Messages - 401 without authentication", async () => {
     const res = await api("/api/messages/history");

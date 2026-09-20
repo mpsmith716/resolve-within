@@ -152,7 +152,7 @@ export default function HomeScreen() {
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   
-  const initialTab = (params.tab === 'journal' || params.tab === 'community') ? params.tab as ActiveTab : 'home';
+  const initialTab = (params.tab === 'journal' || params.tab === 'community') ? (params.tab as ActiveTab) : 'home';
   const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -201,6 +201,8 @@ export default function HomeScreen() {
     if (params.tab === 'journal' || params.tab === 'community') {
       console.log('[Home] Opening with tab from navigation:', params.tab);
       setActiveTab(params.tab as ActiveTab);
+    } else if (params.tab === 'home' || params.tab === undefined || params.tab === '') {
+      setActiveTab('home');
     }
   }, [params.tab]);
 
