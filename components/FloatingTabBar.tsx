@@ -5,14 +5,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Platform,
-  Dimensions,
 } from 'react-native';
 import { useRouter, usePathname, useGlobalSearchParams } from 'expo-router';
 import { resolveActiveTabIndex } from '@/components/floatingTabBarActive';
+import { useFloatingTabActive } from '@/contexts/FloatingTabActiveContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
-import { useTheme } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Href } from 'expo-router';
 import { FontWeights } from '@/utils/fontHelpers';
@@ -28,8 +26,6 @@ const TAB_AUTH_CONTEXT: Record<string, string> = {
   veterans: 'veteran',
   profile: 'profile',
 };
-
-const { width: screenWidth } = Dimensions.get('window');
 
 export interface TabBarItem {
   name: string;
@@ -47,35 +43,48 @@ interface FloatingTabBarProps {
 export default function FloatingTabBar({ tabs }: FloatingTabBarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const theme = useTheme();
   const { user } = useAuth();
+  const { homeTabMode, setHomeTabMode } = useFloatingTabActive();
 
+  // May be empty on Android for group-route query params — homeTabMode is the fallback.
   const searchParams = useGlobalSearchParams<{ tab?: string | string[] }>();
 
-  // Journal uses ?tab=journal under (home); pathname alone would keep Home active.
   const activeTabIndex = resolveActiveTabIndex(
     tabs.map((t) => ({ name: t.name, route: String(t.route) })),
     pathname,
-    { tab: searchParams.tab }
+    { tab: searchParams.tab },
+    { homeTabMode }
   );
 
   const handleTabPress = (tab: TabBarItem) => {
     const isProtected = PROTECTED_TAB_NAMES.includes(tab.name);
-    console.log('Tab pressed:', tab.name, '| protected:', isProtected, '| authenticated:', !!user);
+    if (__DEV__) {
+      console.log('Tab pressed:', tab.name, '| protected:', isProtected, '| authenticated:', !!user);
+    }
 
     if (isProtected && !user) {
       const context = TAB_AUTH_CONTEXT[tab.name] ?? tab.name;
-      console.log('[Auth Guard] Redirecting unauthenticated user to auth, context:', context);
+      if (__DEV__) {
+        console.log('[Auth Guard] Redirecting unauthenticated user to auth, context:', context);
+      }
       router.replace(`/auth?context=${context}` as any);
       return;
     }
 
-    // Explicitly clear ?tab=journal when returning to Home (expo-router may retain params).
+    // Set shared mode BEFORE navigate — Android may never expose ?tab= to this bar.
     if (tab.name === '(home)') {
+      setHomeTabMode('home');
       router.push({ pathname: '/(tabs)/(home)/', params: { tab: 'home' } } as any);
       return;
     }
 
+    if (tab.name === 'journal') {
+      setHomeTabMode('journal');
+      router.push({ pathname: '/(tabs)/(home)/', params: { tab: 'journal' } } as any);
+      return;
+    }
+
+    setHomeTabMode(null);
     router.push(tab.route);
   };
 
