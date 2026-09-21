@@ -1,7 +1,7 @@
 # V1 Data Deletion Contract
 
 ## Scope
-**Delete My Data / Delete Account** performs **true account deletion**: user-owned app data **and** the Better Auth identity/credentials are permanently removed. The same email/password must not authenticate afterward; signing up again creates a **new** identity.
+**Delete Account & Data** (formerly labeled Delete My Data) performs **true account deletion**: user-owned app data **and** the Better Auth identity/credentials are permanently removed. The same email/password must not authenticate afterward; signing up again creates a **new** identity.
 
 ## Server (owner-only, authenticated `DELETE /api/user/data`)
 Authority is the **authenticated session user only**. Client-supplied `userId` / `email` are never trusted as authority.

@@ -17,7 +17,7 @@ Run on physical device or emulator after signing/OAuth are configured. Mark ANDR
 | Admin (admin account only) | | | |
 | Crisis / 988 affordance | | | Must open dialer/SMS or show number; no fake dispatch |
 | Notifications permission prompt | | | Optional enable/disable |
-| Delete My Data | | | Must fail closed; success then logout |
+| Delete Account & Data | | | Must fail closed; success then logout |
 | Privacy / Terms / Guidelines screens | | | |
 | Deep link `resolvewithin://` | | | |
 | Offline / backend error UX | | | No crash |
