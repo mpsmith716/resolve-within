@@ -96,12 +96,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("[Auth] Initializing AuthProvider, loading user session...");
+    if (__DEV__) console.log("[Auth] Initializing AuthProvider, loading user session...");
     fetchUser();
 
     // Listen for deep links (e.g. from social auth redirects)
     const subscription = Linking.addEventListener("url", (event) => {
-      console.log("[Auth] Deep link received", event.url);
+      if (__DEV__) console.log("[Auth] Deep link received");
       fetchUser();
     });
 
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUser = async (): Promise<User | null> => {
     try {
       setLoading(true);
-      console.log("[Auth] Fetching user session from Better Auth...");
+      if (__DEV__) console.log("[Auth] Fetching user session from Better Auth...");
       const session = await authClient.getSession();
 
       if (session?.error) {
@@ -121,14 +121,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (session?.data?.user) {
-        console.log("[Auth] User session found:", session.data.user.email);
+        if (__DEV__) console.log("[Auth] User session found");
         const nextUser = session.data.user as User;
         setUser(nextUser);
 
         // Sync token to SecureStore/localStorage for utils/api.ts + authClient Bearer
         const sessionToken = extractSessionToken(session.data) ?? session.data.session?.token;
         if (sessionToken) {
-          console.log("[Auth] Syncing bearer token to storage");
+          if (__DEV__) console.log("[Auth] Syncing bearer token to storage");
           await setBearerToken(sessionToken);
         }
 
@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return nextUser;
       }
 
-      console.log("[Auth] No active session found");
+      if (__DEV__) console.log("[Auth] No active session found");
       setUser(null);
       setProfile(null);
       await clearAuthTokens();
@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("[Auth] Failed to fetch user session:", error?.message || error);
 
       if (error?.message?.includes("401") || error?.status === 401) {
-        console.log("[Auth] 401 detected, clearing tokens");
+        if (__DEV__) console.log("[Auth] 401 detected, clearing tokens");
         setUser(null);
         setProfile(null);
         await clearAuthTokens();
@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async (): Promise<UserProfile | null> => {
     try {
-      console.log("[Auth] Fetching user profile...");
+      if (__DEV__) console.log("[Auth] Fetching user profile...");
       const data = await authenticatedGet<UserProfile>("/api/user/profile");
       setProfile(data);
       if (data?.userType) {
@@ -201,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const token = extractSessionToken(result?.data);
     if (token) {
-      console.log(`[Auth] ${action} returned session token, saving for Bearer + API`);
+      if (__DEV__) console.log(`[Auth] ${action} returned session token, saving for Bearer + API`);
       await setBearerToken(token);
     }
 
@@ -217,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
-      console.log("[Auth] Signing in with email:", email);
+      if (__DEV__) console.log("[Auth] Signing in with email");
       const result = await authClient.signIn.email({ email, password });
       await establishSessionAfterCredentialAuth(result, "sign-in");
     } catch (error: any) {
@@ -228,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUpWithEmail = async (email: string, password: string, name?: string) => {
     try {
-      console.log("[Auth] Signing up with email:", email);
+      if (__DEV__) console.log("[Auth] Signing up with email");
       const result = await authClient.signUp.email({
         email,
         password,
@@ -243,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithSocial = async (provider: "google" | "apple" | "github") => {
     try {
-      console.log("[Auth] Signing in with", provider);
+      if (__DEV__) console.log("[Auth] Signing in with", provider);
       
       if (Platform.OS === "web") {
         const token = await openOAuthPopup(provider);
@@ -276,13 +276,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      console.log("[Auth] Signing out...");
+      if (__DEV__) console.log("[Auth] Signing out...");
       await authClient.signOut();
     } catch (error: any) {
       console.warn("[Auth] Sign out API call failed (continuing):", error?.message || error);
     } finally {
       // Always clear local state, even if API call fails
-      console.log("[Auth] Clearing local auth state");
+      if (__DEV__) console.log("[Auth] Clearing local auth state");
       setUser(null);
       setProfile(null);
       try {

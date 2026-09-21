@@ -50,20 +50,20 @@ export default function PrivacyPolicyScreen() {
   const minimalDataText = 'Resolve Within is designed to minimize data collection and prioritize user privacy.';
 
   const locationTitle = 'Location Services';
-  const locationText = 'Future versions may optionally use location services to help users find nearby support resources, crisis centers, or mental health services.';
-  const locationPermissionText = 'Location access requires explicit user permission';
-  const locationUsageText = 'Location is used only for support resource discovery';
-  const locationDisableText = 'Users may disable location access at any time through device settings';
+  const locationText = 'Resolve Within does not currently access your device location. Crisis and support resources open as links or phone numbers you choose. Future versions may optionally offer location-based resource discovery, which would require your explicit permission.';
+  const locationPermissionText = 'Device location is not requested in the current release. If location features are added later, access will require explicit permission.';
+  const locationUsageText = 'Any future location use would be limited to helping find nearby support resources.';
+  const locationDisableText = 'Users could disable location access at any time through device settings.';
 
   const dataStorageTitle = 'Data Storage';
-  const dataStorageText = 'Some information may be stored locally on your device for app functionality. Future versions may optionally store data securely in cloud services to enable features like data sync across devices.';
+  const dataStorageText = 'Signed-in features store account profile, journal entries, mood check-ins, community content, favorites, breathing history, and preferences on Resolve Within servers so they can sync across devices. Some preferences may also be cached locally on your device for app functionality.';
 
   const dataDeletionTitle = 'Data Deletion';
   const dataDeletionText = 'Users can use Delete Account & Data in the app to permanently remove journal entries, mood history, community posts and reactions, favorites, breathing history, preferences, and the login identity from Resolve Within servers and this device. After successful deletion the same email/password cannot sign in; creating an account again starts a new identity. Limited moderation or admin audit records may be retained or removed according to the product deletion contract. After a successful deletion you are signed out immediately.';
 
   const thirdPartyTitle = 'Third-Party Services';
   const thirdPartyText = 'The app may use third-party services for:';
-  const thirdParty1 = 'Maps and location services';
+  const thirdParty1 = 'Optional outbound links to maps or support directories (no device location required today)';
   const thirdParty2 = 'Analytics and app performance monitoring';
   const thirdParty3 = 'Crash reporting and error tracking';
   const thirdPartyDisclaimerText = 'These services have their own privacy policies and data handling practices.';

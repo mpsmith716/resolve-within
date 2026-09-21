@@ -237,7 +237,7 @@ export default function ProfileScreen() {
   const fetchProfileData = useCallback(async () => {
     if (!user) return;
     try {
-      console.log('ProfileScreen: Fetching profile data from API');
+      if (__DEV__) console.log('ProfileScreen: Fetching profile data from API');
       const [profileData, trendsData, insightsData] = await Promise.all([
         authenticatedGet<UserProfile>('/api/user/profile'),
         authenticatedGet<JournalTrends>('/api/journal/trends'),
@@ -252,9 +252,9 @@ export default function ProfileScreen() {
         }),
       ]);
 
-      console.log('ProfileScreen: Profile data received:', profileData);
-      console.log('ProfileScreen: Trends data received:', trendsData);
-      console.log('ProfileScreen: Progress insights received:', insightsData);
+      if (__DEV__) console.log('ProfileScreen: Profile data received');
+      if (__DEV__) console.log('ProfileScreen: Trends data received');
+      if (__DEV__) console.log('ProfileScreen: Progress insights received');
 
       setProfile(profileData);
       setTrends(trendsData);
@@ -271,22 +271,22 @@ export default function ProfileScreen() {
       setLoading(false);
       return;
     }
-    console.log('ProfileScreen: Component mounted, fetching profile data');
+    if (__DEV__) console.log('ProfileScreen: Component mounted, fetching profile data');
     fetchProfileData();
   }, [user, fetchProfileData]);
 
   async function handleSignOut() {
-    console.log('ProfileScreen: User tapped Sign Out button');
+    if (__DEV__) console.log('ProfileScreen: User tapped Sign Out button');
     setShowSignOutModal(true);
   }
 
   async function confirmSignOut() {
-    console.log('ProfileScreen: User confirmed sign out');
+    if (__DEV__) console.log('ProfileScreen: User confirmed sign out');
     setShowSignOutModal(false);
     try {
-      console.log('ProfileScreen: Calling signOut function');
+      if (__DEV__) console.log('ProfileScreen: Calling signOut function');
       await signOut();
-      console.log('ProfileScreen: Sign out successful, navigating to auth');
+      if (__DEV__) console.log('ProfileScreen: Sign out successful, navigating to auth');
       router.replace('/auth');
     } catch (error) {
       console.warn('ProfileScreen: Error during sign out, navigating to auth anyway:', error);
@@ -398,7 +398,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('ProfileScreen: User tapped Notifications');
+                if (__DEV__) console.log('ProfileScreen: User tapped Notifications');
                 router.push('/notifications');
               }}
             >
@@ -420,7 +420,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('ProfileScreen: User tapped Message Preferences');
+                if (__DEV__) console.log('ProfileScreen: User tapped Message Preferences');
                 router.push('/message-preferences');
               }}
             >
@@ -447,7 +447,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
-                  console.log('ProfileScreen: User tapped Admin Dashboard');
+                  if (__DEV__) console.log('ProfileScreen: User tapped Admin Dashboard');
                   router.push('/admin');
                 }}
               >
@@ -473,7 +473,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('ProfileScreen: User tapped Delete Account & Data');
+                if (__DEV__) console.log('ProfileScreen: User tapped Delete Account & Data');
                 router.push('/delete-data');
               }}
             >
@@ -498,7 +498,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('ProfileScreen: User tapped Privacy Policy');
+                if (__DEV__) console.log('ProfileScreen: User tapped Privacy Policy');
                 router.push('/privacy-policy');
               }}
             >
@@ -521,7 +521,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('ProfileScreen: User tapped Community Guidelines');
+                if (__DEV__) console.log('ProfileScreen: User tapped Community Guidelines');
                 router.push('/community-guidelines');
               }}
             >
@@ -543,7 +543,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('ProfileScreen: User tapped Terms of Service');
+                if (__DEV__) console.log('ProfileScreen: User tapped Terms of Service');
                 router.push('/terms-of-service');
               }}
             >
@@ -583,7 +583,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={() => {
-                  console.log('ProfileScreen: User cancelled sign out');
+                  if (__DEV__) console.log('ProfileScreen: User cancelled sign out');
                   setShowSignOutModal(false);
                 }}
               >

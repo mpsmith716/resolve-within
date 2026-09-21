@@ -6,6 +6,7 @@ import { API_BASE_URL } from "./apiBaseUrl";
 
 const API_URL = API_BASE_URL;
 
+/** Legacy SecureStore key name (pre-rebrand). Renaming would force-logout existing installs — defer. */
 export const BEARER_TOKEN_KEY = "mental-reset_bearer_token";
 
 // Platform-specific storage: localStorage for web, SecureStore for native

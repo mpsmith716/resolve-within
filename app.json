@@ -17,8 +17,7 @@
       "bundleIdentifier": "com.cypherwavestudios.resolvewithin",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSUserNotificationsUsageDescription": "Resolve Within may send gentle reminders to help you pause, breathe, or check in during the day.",
-        "NSLocationWhenInUseUsageDescription": "Location may be used to help find nearby mental health resources or crisis support services."
+        "NSUserNotificationsUsageDescription": "Resolve Within may send gentle reminders to help you pause, breathe, or check in during the day."
       }
     },
     "android": {
@@ -29,6 +28,9 @@
       "package": "com.cypherwavestudios.resolvewithin",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -39,6 +41,12 @@
       "expo-font",
       "expo-router",
       "expo-web-browser",
+      [
+        "expo-av",
+        {
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-notifications",
         {
