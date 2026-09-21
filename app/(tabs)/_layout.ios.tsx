@@ -2,6 +2,7 @@
 import React from 'react';
 import { Stack } from 'expo-router';
 import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
+import { FloatingTabActiveProvider } from '@/contexts/FloatingTabActiveContext';
 
 export default function TabLayout() {
   const tabs: TabBarItem[] = [
@@ -44,7 +45,7 @@ export default function TabLayout() {
   ];
 
   return (
-    <>
+    <FloatingTabActiveProvider>
       <Stack
         screenOptions={{
           headerShown: false,
@@ -74,6 +75,6 @@ export default function TabLayout() {
         />
       </Stack>
       <FloatingTabBar tabs={tabs} />
-    </>
+    </FloatingTabActiveProvider>
   );
 }

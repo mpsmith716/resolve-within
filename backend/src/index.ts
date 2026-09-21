@@ -41,6 +41,13 @@ app.withAuth({
     "exp://192.168.*.*:*/**",
   ],
   plugins: [expo()],
+  // Enables Better Auth POST /api/auth/delete-user (test cleanup + optional client path).
+  // Primary product deletion remains DELETE /api/user/data (transactional app + identity wipe).
+  user: {
+    deleteUser: {
+      enabled: true,
+    },
+  },
 });
 
 // Optionally seed reviewer account when REVIEWER_EMAIL + REVIEWER_PASSWORD are set (no default secrets)

@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/styles/commonStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useFloatingTabActive } from '@/contexts/FloatingTabActiveContext';
 import { apiGet, authenticatedGet, authenticatedPost, authenticatedDelete } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppModal } from '@/components/ErrorBoundary';
@@ -151,8 +152,9 @@ export default function HomeScreen() {
   const { user, loading: authLoading } = useAuth();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
+  const { setHomeTabMode } = useFloatingTabActive();
   
-  const initialTab = (params.tab === 'journal' || params.tab === 'community') ? params.tab as ActiveTab : 'home';
+  const initialTab = (params.tab === 'journal' || params.tab === 'community') ? (params.tab as ActiveTab) : 'home';
   const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -201,8 +203,15 @@ export default function HomeScreen() {
     if (params.tab === 'journal' || params.tab === 'community') {
       console.log('[Home] Opening with tab from navigation:', params.tab);
       setActiveTab(params.tab as ActiveTab);
+    } else if (params.tab === 'home' || params.tab === undefined || params.tab === '') {
+      setActiveTab('home');
     }
   }, [params.tab]);
+
+  // Keep bottom FloatingTabBar in sync (Android misses ?tab= via global search params).
+  useEffect(() => {
+    setHomeTabMode(activeTab);
+  }, [activeTab, setHomeTabMode]);
 
   // Smooth fade transition when switching tabs
   useEffect(() => {
