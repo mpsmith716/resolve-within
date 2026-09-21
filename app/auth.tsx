@@ -61,7 +61,7 @@ export default function AuthScreen() {
 
   const handlePostAuthRedirect = async (forceOnboarding = false) => {
     if (returnTo) {
-      console.log('[Auth] Post-login redirect to returnTo:', returnTo);
+      if (__DEV__) console.log('[Auth] Post-login redirect to returnTo');
       router.replace(returnTo as any);
       return;
     }
@@ -69,7 +69,7 @@ export default function AuthScreen() {
     try {
       const shouldOnboard = forceOnboarding || (await needsOnboarding());
       if (shouldOnboard) {
-        console.log('[Auth] Post-login redirect to onboarding');
+        if (__DEV__) console.log('[Auth] Post-login redirect to onboarding');
         router.replace('/onboarding');
         return;
       }
@@ -77,12 +77,12 @@ export default function AuthScreen() {
       console.warn('[Auth] Onboarding check failed, continuing to tabs:', error?.message || error);
     }
 
-    console.log('[Auth] Post-login redirect to tabs');
+    if (__DEV__) console.log('[Auth] Post-login redirect to tabs');
     router.replace('/(tabs)');
   };
 
   const handleEmailSubmit = async () => {
-    console.log('[Auth] User tapped email submit button, mode:', mode);
+    if (__DEV__) console.log('[Auth] User tapped email submit button, mode:', mode);
     setErrorMessage('');
 
     if (!email.trim()) {
@@ -101,14 +101,14 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       if (mode === 'signin') {
-        console.log('[Auth] Calling signInWithEmail for:', email);
+        if (__DEV__) console.log('[Auth] Calling signInWithEmail');
         await signInWithEmail(email.trim(), password);
-        console.log('[Auth] Email sign-in successful');
+        if (__DEV__) console.log('[Auth] Email sign-in successful');
         await handlePostAuthRedirect(false);
       } else {
-        console.log('[Auth] Calling signUpWithEmail for:', email);
+        if (__DEV__) console.log('[Auth] Calling signUpWithEmail');
         await signUpWithEmail(email.trim(), password, name.trim());
-        console.log('[Auth] Email sign-up successful');
+        if (__DEV__) console.log('[Auth] Email sign-up successful');
         await handlePostAuthRedirect(true);
       }
     } catch (error: any) {
@@ -120,7 +120,7 @@ export default function AuthScreen() {
   };
 
   const handleSocialAuth = async (provider: 'google' | 'apple') => {
-    console.log('[Auth] User tapped social auth button:', provider);
+    if (__DEV__) console.log('[Auth] User tapped social auth button:', provider);
     setErrorMessage('');
     setLoading(true);
     try {
@@ -129,7 +129,7 @@ export default function AuthScreen() {
       } else {
         await signInWithApple();
       }
-      console.log('[Auth] Social auth successful:', provider);
+      if (__DEV__) console.log('[Auth] Social auth successful:', provider);
       await handlePostAuthRedirect(false);
     } catch (error: any) {
       console.error('[Auth] Social auth error:', error?.message || error);
@@ -140,7 +140,7 @@ export default function AuthScreen() {
   };
 
   const handleContinueWithout = () => {
-    console.log('[Auth] User tapped Continue without signing in');
+    if (__DEV__) console.log('[Auth] User tapped Continue without signing in');
     try {
       router.back();
     } catch {
@@ -149,13 +149,13 @@ export default function AuthScreen() {
   };
 
   const handleSwitchMode = () => {
-    console.log('[Auth] User switched mode to:', mode === 'signin' ? 'signup' : 'signin');
+    if (__DEV__) console.log('[Auth] User switched mode to:', mode === 'signin' ? 'signup' : 'signin');
     setMode(mode === 'signin' ? 'signup' : 'signin');
     setErrorMessage('');
   };
 
   const handleTogglePassword = () => {
-    console.log('[Auth] User toggled password visibility');
+    if (__DEV__) console.log('[Auth] User toggled password visibility');
     setShowPassword((prev) => !prev);
   };
 
