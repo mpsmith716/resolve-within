@@ -43,6 +43,9 @@ interface AuthContextType {
   fetchUser: () => Promise<User | null>;
   refreshProfile: () => Promise<UserProfile | null>;
   needsOnboarding: () => Promise<boolean>;
+  /** True after user chose Continue without signing in (in-memory only). */
+  isGuest: boolean;
+  continueAsGuest: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -94,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
     if (__DEV__) console.log("[Auth] Initializing AuthProvider, loading user session...");
@@ -124,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (__DEV__) console.log("[Auth] User session found");
         const nextUser = session.data.user as User;
         setUser(nextUser);
+        setIsGuest(false);
 
         // Sync token to SecureStore/localStorage for utils/api.ts + authClient Bearer
         const sessionToken = extractSessionToken(session.data) ?? session.data.session?.token;
@@ -274,6 +279,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithApple = () => signInWithSocial("apple");
   const signInWithGitHub = () => signInWithSocial("github");
 
+  const continueAsGuest = () => {
+    if (__DEV__) console.log("[Auth] Continuing as guest");
+    setIsGuest(true);
+    setUser(null);
+    setProfile(null);
+    setLoading(false);
+  };
+
   const signOut = async () => {
     try {
       if (__DEV__) console.log("[Auth] Signing out...");
@@ -285,6 +298,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (__DEV__) console.log("[Auth] Clearing local auth state");
       setUser(null);
       setProfile(null);
+      setIsGuest(false);
       try {
         await clearAuthTokens();
       } catch (tokenError: any) {
@@ -308,6 +322,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchUser,
         refreshProfile,
         needsOnboarding,
+        isGuest,
+        continueAsGuest,
       }}
     >
       {children}
@@ -365,6 +381,10 @@ export function useAuth(): AuthContextType {
         return null;
       },
       needsOnboarding: async () => false,
+      isGuest: false,
+      continueAsGuest: () => {
+        console.error("[Auth] continueAsGuest called outside AuthProvider");
+      },
     };
   }
   
