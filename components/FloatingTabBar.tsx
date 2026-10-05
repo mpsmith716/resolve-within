@@ -1,6 +1,7 @@
 
 import React from 'react';
 import {
+  Alert,
   View,
   Text,
   TouchableOpacity,
@@ -65,9 +66,22 @@ export default function FloatingTabBar({ tabs }: FloatingTabBarProps) {
     if (isProtected && !user) {
       const context = TAB_AUTH_CONTEXT[tab.name] ?? tab.name;
       if (__DEV__) {
-        console.log('[Auth Guard] Redirecting unauthenticated user to auth, context:', context);
+        console.log('[Auth Guard] Prompting unauthenticated user to sign in, context:', context);
       }
-      router.replace(`/auth?context=${context}` as any);
+      // Soft prompt — do not hard-replace to /auth (that broke Continue without signing in).
+      Alert.alert(
+        'Sign in required',
+        context === 'journal'
+          ? 'Your journal is private and securely tied to your account. Please sign in or create a free account to save and view journal entries.'
+          : 'Please sign in or create a free account to access this section.',
+        [
+          { text: 'Maybe Later', style: 'cancel' },
+          {
+            text: 'Sign In',
+            onPress: () => router.push(`/auth?context=${context}` as any),
+          },
+        ]
+      );
       return;
     }
 

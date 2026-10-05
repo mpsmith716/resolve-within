@@ -39,7 +39,7 @@ const DEFAULT_MESSAGE =
 export default function AuthScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ context?: string; returnTo?: string }>();
-  const { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, loading: authLoading, needsOnboarding } = useAuth();
+  const { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, loading: authLoading, needsOnboarding, continueAsGuest } = useAuth();
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [loading, setLoading] = useState(false);
@@ -141,11 +141,10 @@ export default function AuthScreen() {
 
   const handleContinueWithout = () => {
     if (__DEV__) console.log('[Auth] User tapped Continue without signing in');
-    try {
-      router.back();
-    } catch {
-      router.replace('/');
-    }
+    // Guest browsing is intentional: home + panic/support tools work without an account.
+    // Protected tabs (journal / veterans / profile) still prompt to sign in.
+    continueAsGuest();
+    router.replace('/(tabs)/(home)' as any);
   };
 
   const handleSwitchMode = () => {

@@ -392,25 +392,14 @@ export default function HomeScreen() {
     setPosts([]);
   };
 
-  if (!authLoading && !user) {
-    const signInPromptEmoji = '🔒';
-    const signInPromptTitle = 'Sign In Required';
-    const signInPromptSubtitle = 'Please sign in to access your journal and community features';
-    const signInButtonText = 'Sign In';
-    
-    return (
-      <LinearGradient colors={safeGradient} style={styles.container}>
-        <View style={styles.signInPrompt}>
-          <Text style={styles.signInEmoji}>{signInPromptEmoji}</Text>
-          <Text style={styles.signInTitle}>{signInPromptTitle}</Text>
-          <Text style={styles.signInSubtitle}>{signInPromptSubtitle}</Text>
-          <TouchableOpacity style={styles.signInButton} onPress={() => router.push('/auth')}>
-            <Text style={styles.signInButtonText}>{signInButtonText}</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    );
-  }
+  // Guest / continue-without-signin: home support tools are allowed.
+  // Journal & community still require auth (same contract as Android index.tsx).
+  useEffect(() => {
+    if (!authLoading && !user && (activeTab === 'journal' || activeTab === 'community')) {
+      console.log('[Home] Unauthenticated user on protected tab:', activeTab, '— redirecting to auth');
+      router.replace(`/auth?context=${activeTab}` as any);
+    }
+  }, [authLoading, user, activeTab, router]);
 
   const renderHomeTab = () => {
     const displayName = user?.name ? user.name.split(' ')[0] : '';
