@@ -9,7 +9,7 @@
  *     Google Cloud "Web application" OAuth client.
  *     Redirect URI: https://<backend host>/api/auth/callback/google
  *
- *   APPLE_CLIENT_ID      Apple Services ID (e.g. com.cypherwavestudios.resolvewithin.signin)
+ *   APPLE_CLIENT_ID      Apple Services ID (e.g. org.theresolvewithinproject.app.signin)
  *   APPLE_CLIENT_SECRET  ES256 client-secret JWT signed with the Sign in with Apple .p8 key.
  *                        Better Auth 1.4.5 has no team/key-id fields: the JWT must be
  *                        pre-generated (backend/scripts/generate-apple-client-secret.mjs)

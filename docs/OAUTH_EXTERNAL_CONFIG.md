@@ -1,7 +1,18 @@
 # Production OAuth — External Config Checklist
 
 In-repo scheme remains `resolvewithin`. Production package/bundle IDs are now:
-`com.cypherwavestudios.resolvewithin`.
+`org.theresolvewithinproject.app`.
+
+> **App ID change (Oct 2026):** the package/bundle ID moved from the old `com.cypherwavestudios.resolvewithin`
+> to `org.theresolvewithinproject.app` so Resolve Within is brand- and legally separate from the owner's LLC
+> (it is becoming its own not-for-profit, theresolvewithinproject.org). The Sign in with Apple Services ID is
+> now `org.theresolvewithinproject.app.signin`.
+> - The old ID `com.cypherwavestudios.resolvewithin` has an existing App Store Connect record
+>   (Apple ID `6765546619`; TestFlight-era May 2026 submissions only).
+> - The new ID needs a **new** App Store Connect record (bundle IDs can't be changed on an existing record).
+> - **Rename the old record before removing it** so the app name "Resolve Within" is freed and can move to the new record.
+> - Android: the new package is a new app to Google Play / Android and needs a new upload keystore (EAS-managed);
+>   Google OAuth Android clients (if ever added) must use the new package + new key's SHA-1/SHA-256.
 
 OAuth client IDs and secrets are **not** stored in this repository (Better Auth / hosting cloud configuration). Do not invent or commit them.
 
