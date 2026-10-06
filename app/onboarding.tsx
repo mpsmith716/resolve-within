@@ -15,15 +15,15 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { AppModal } from '@/components/ErrorBoundary';
 import { colors } from '@/styles/commonStyles';
 import { authenticatedPut } from '@/utils/api';
-import { useAuth } from '@/contexts/AuthContext';
-import { safeSetItem } from '@/utils/safeStorage';
+import { useAuth, PENDING_PREFERENCES_KEY } from '@/contexts/AuthContext';
+import { safeSetItem, safeSetJSON } from '@/utils/safeStorage';
 
 type UserType = 'veteran' | 'civilian';
 type MessageStream = 'mental_health' | 'veteran' | 'faith';
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, isGuest, continueAsGuest } = useAuth();
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(1);
   const [userType, setUserType] = useState<UserType | null>(null);
@@ -54,6 +54,23 @@ export default function OnboardingScreen() {
       messageStreams.length > 0 ? messageStreams : ['mental_health'];
 
     setLoading(true);
+
+    // No authenticated session (guest, or a sign-in that never established a session):
+    // PUT /api/user/preferences requires auth and would always fail (401 / no token).
+    // Save locally, finish onboarding, and let AuthContext sync to the server after sign-in.
+    if (!user) {
+      try {
+        console.log('[Onboarding] No session; saving preferences locally');
+        await safeSetJSON(PENDING_PREFERENCES_KEY, { userType, messageStreams: streamsToSave });
+        await safeSetItem('onboarding_completed', 'true');
+        if (!isGuest) continueAsGuest();
+        router.replace('/(tabs)/(home)');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
       console.log('[Onboarding] Saving preferences:', { userType, messageStreams: streamsToSave });
       await authenticatedPut('/api/user/preferences', {
@@ -67,10 +84,18 @@ export default function OnboardingScreen() {
         // Profile refresh is best-effort after preferences save
       }
       console.log('[Onboarding] Preferences saved successfully, navigating to home');
-      router.replace('/(tabs)/(home)/');
+      router.replace('/(tabs)/(home)');
     } catch (error: any) {
       console.error('[Onboarding] Failed to save preferences:', error?.message || error);
-      setErrorModal({ visible: true, title: 'Error', message: 'Failed to save preferences. Please try again.' });
+      const message = String(error?.message || '');
+      const sessionProblem = message.includes('401') || message.includes('Authentication token not found');
+      setErrorModal({
+        visible: true,
+        title: 'Error',
+        message: sessionProblem
+          ? 'Your sign-in session has expired. Please sign in again to save your preferences.'
+          : 'Failed to save preferences. Please try again.',
+      });
     } finally {
       setLoading(false);
     }
