@@ -19,8 +19,8 @@ No secrets in this file. Never paste client secrets, `.p8` keys, or the Apple JW
 | Google redirect URI | `https://resolve-within-backend.onrender.com/api/auth/callback/google` |
 | Apple return URL | `https://resolve-within-backend.onrender.com/api/auth/callback/apple` |
 | App deep link (callbackURL) | `resolvewithin://auth-callback` (already trusted) |
-| iOS bundle / App ID | `com.cypherwavestudios.resolvewithin` |
-| Apple Services ID (client_id) | `com.cypherwavestudios.resolvewithin.signin` |
+| iOS bundle / App ID | `org.theresolvewithinproject.app` |
+| Apple Services ID (client_id) | `org.theresolvewithinproject.app.signin` |
 | Apple Team ID | `BLXJ5X69U3` |
 
 ## Google Cloud (console.cloud.google.com → Google Auth Platform)
@@ -39,13 +39,13 @@ No secrets in this file. Never paste client secrets, `.p8` keys, or the Apple JW
 
 ## Apple Developer (developer.apple.com/account)
 0. If the account page shows an updated Program License Agreement, the Account Holder must accept it first. Until then, creating identifiers and keys is blocked.
-1. **Identifiers → App IDs** → `com.cypherwavestudios.resolvewithin`. If it's missing, create it: App, Explicit, description `Resolve Within`.
+1. **Identifiers → App IDs** → `org.theresolvewithinproject.app`. If it's missing, create it: App, Explicit, description `Resolve Within`.
    Enable **Sign In with Apple** → *Enable as a primary App ID* → Save → Confirm.
-2. **Identifiers → + → Services IDs**: Description `Resolve Within`, Identifier `com.cypherwavestudios.resolvewithin.signin` → Register.
-   Open it → check **Sign In with Apple** → Configure → Primary App ID `com.cypherwavestudios.resolvewithin` →
+2. **Identifiers → + → Services IDs**: Description `Resolve Within`, Identifier `org.theresolvewithinproject.app.signin` → Register.
+   Open it → check **Sign In with Apple** → Configure → Primary App ID `org.theresolvewithinproject.app` →
    Domains `resolve-within-backend.onrender.com` → Return URLs `https://resolve-within-backend.onrender.com/api/auth/callback/apple`
    → Next → Done → Continue → **Save**. No domain-verification file is needed.
-3. **Keys → +**: name `Resolve Within Sign in with Apple`, check **Sign in with Apple** → Configure → primary App ID `com.cypherwavestudios.resolvewithin`
+3. **Keys → +**: name `Resolve Within Sign in with Apple`, check **Sign in with Apple** → Configure → primary App ID `org.theresolvewithinproject.app`
    → Save → Continue → Register → **Download `AuthKey_<KEYID>.p8` (one-time download)** and note the 10-character Key ID.
 4. Generate the client secret JWT (Better Auth 1.4.5 needs a pre-signed JWT, not team/key fields):
    ```bash
@@ -53,7 +53,7 @@ No secrets in this file. Never paste client secrets, `.p8` keys, or the Apple JW
    mv <browser-download-dir>/AuthKey_<KEYID>.p8 /workspace/secrets/resolve-within-apple/ && chmod 600 /workspace/secrets/resolve-within-apple/AuthKey_<KEYID>.p8
    node /workspace/resolve-within/backend/scripts/generate-apple-client-secret.mjs \
      --team-id BLXJ5X69U3 --key-id <KEYID> \
-     --client-id com.cypherwavestudios.resolvewithin.signin \
+     --client-id org.theresolvewithinproject.app.signin \
      --key-file /workspace/secrets/resolve-within-apple/AuthKey_<KEYID>.p8
    # -> writes /workspace/secrets/resolve-within-apple/apple-client-secret.jwt (mode 600), prints only non-secret claims + expiry
    ```
@@ -66,9 +66,9 @@ No secrets in this file. Never paste client secrets, `.p8` keys, or the Apple JW
 |---|---|
 | `GOOGLE_CLIENT_ID` | Google Web client → Client ID (`…apps.googleusercontent.com`) |
 | `GOOGLE_CLIENT_SECRET` | Google Web client → Client secret (secret) |
-| `APPLE_CLIENT_ID` | `com.cypherwavestudios.resolvewithin.signin` |
+| `APPLE_CLIENT_ID` | `org.theresolvewithinproject.app.signin` |
 | `APPLE_CLIENT_SECRET` | contents of `apple-client-secret.jwt` (secret, one line) |
-| `APPLE_APP_BUNDLE_IDENTIFIER` | *optional, leave unset*; only for future native ID-token sign-in (`com.cypherwavestudios.resolvewithin`) |
+| `APPLE_APP_BUNDLE_IDENTIFIER` | *optional, leave unset*; only for future native ID-token sign-in (`org.theresolvewithinproject.app`) |
 | `AUTH_PUBLIC_BASE_URL` | *optional, leave unset*; code falls back to Render's automatic `RENDER_EXTERNAL_URL` |
 
 A provider turns on only when both its ID and secret are set. Missing vars leave it off (404 `PROVIDER_NOT_FOUND`), and startup never fails.

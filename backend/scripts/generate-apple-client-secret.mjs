@@ -10,7 +10,7 @@
  *   node backend/scripts/generate-apple-client-secret.mjs \
  *     --team-id BLXJ5X69U3 \
  *     --key-id <10-char Key ID> \
- *     --client-id com.cypherwavestudios.resolvewithin.signin \
+ *     --client-id org.theresolvewithinproject.app.signin \
  *     --key-file /workspace/secrets/resolve-within-apple/AuthKey_<KEYID>.p8 \
  *     [--out /workspace/secrets/resolve-within-apple/apple-client-secret.jwt] \
  *     [--days 180]
@@ -56,7 +56,7 @@ const outFile = resolve(args.out || (keyFile ? `${dirname(keyFile)}/apple-client
 
 if (!teamId || !/^[A-Z0-9]{10}$/.test(teamId)) fail("--team-id must be the 10-character Apple Team ID");
 if (!keyId || !/^[A-Z0-9]{10}$/.test(keyId)) fail("--key-id must be the 10-character Key ID of the Sign in with Apple key");
-if (!clientId) fail("--client-id (the Services ID, e.g. com.cypherwavestudios.resolvewithin.signin) is required");
+if (!clientId) fail("--client-id (the Services ID, e.g. org.theresolvewithinproject.app.signin) is required");
 if (!keyFile) fail("--key-file (path to AuthKey_<KEYID>.p8) is required");
 if (!Number.isFinite(days) || days <= 0) fail("--days must be a positive number");
 
