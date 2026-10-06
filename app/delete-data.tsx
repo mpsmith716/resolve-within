@@ -183,6 +183,7 @@ async function clearLocalUserData(): Promise<void> {
     'user_settings',
     'crisisDisclaimerAccepted',
     'onboarding_completed',
+    'pending_onboarding_preferences',
     'resolveWithinFavorites',
   ];
 

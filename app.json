@@ -31,7 +31,8 @@
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",

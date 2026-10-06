@@ -133,7 +133,7 @@ export default function AuthScreen() {
       await handlePostAuthRedirect(false);
     } catch (error: any) {
       console.error('[Auth] Social auth error:', error?.message || error);
-      setErrorMessage('Unable to sign in. Please check your details and try again.');
+      setErrorMessage(error?.message || 'Unable to sign in. Please try again.');
     } finally {
       setLoading(false);
     }

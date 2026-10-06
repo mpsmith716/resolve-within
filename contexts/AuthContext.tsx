@@ -4,8 +4,37 @@ import { Platform } from "react-native";
 import * as Linking from "expo-linking";
 import { authClient, setBearerToken, clearAuthTokens } from "@/lib/auth";
 import { extractSessionToken } from "@/lib/authHeaders";
-import { authenticatedGet } from "@/utils/api";
-import { safeGetItem, safeSetItem } from "@/utils/safeStorage";
+import { authenticatedGet, authenticatedPut } from "@/utils/api";
+import { safeDeleteItem, safeGetItem, safeGetJSON, safeSetItem } from "@/utils/safeStorage";
+
+/** Onboarding choices saved on-device when there was no session; synced after sign-in. */
+export const PENDING_PREFERENCES_KEY = "pending_onboarding_preferences";
+
+type PendingPreferences = { userType?: string; messageStreams?: string[] };
+
+/**
+ * Best-effort: push onboarding choices made without a session to the server once signed in.
+ * Server values win if the account already has a userType.
+ */
+async function syncPendingPreferences(current: UserProfile | null): Promise<UserProfile | null> {
+  const pending = await safeGetJSON<PendingPreferences | null>(PENDING_PREFERENCES_KEY, null);
+  if (!pending || !pending.userType) return current;
+  if (current?.userType) {
+    await safeDeleteItem(PENDING_PREFERENCES_KEY);
+    return current;
+  }
+  try {
+    await authenticatedPut("/api/user/preferences", {
+      userType: pending.userType,
+      messageStreams: pending.messageStreams?.length ? pending.messageStreams : ["mental_health"],
+    });
+    await safeDeleteItem(PENDING_PREFERENCES_KEY);
+    return await authenticatedGet<UserProfile>("/api/user/profile");
+  } catch (error: any) {
+    console.warn("[Auth] Pending preferences sync skipped:", error?.message || error);
+    return current;
+  }
+}
 
 interface User {
   id: string;
@@ -140,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Load profile for onboarding / preferences (best-effort)
         try {
           const data = await authenticatedGet<UserProfile>("/api/user/profile");
-          setProfile(data);
+          setProfile(await syncPendingPreferences(data));
         } catch (profileError: any) {
           console.warn("[Auth] Profile fetch skipped:", profileError?.message || profileError);
         }
@@ -261,13 +290,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         // Native: Use expo-linking to generate a proper deep link
         const callbackURL = Linking.createURL("auth-callback");
-        await authClient.signIn.social({
+        const result: any = await authClient.signIn.social({
           provider,
           callbackURL,
         });
-        
-        // The redirect will reload the app, fetchUser will be called on mount
-        await fetchUser();
+
+        // better-fetch returns { error } instead of throwing, and expoClient returns silently
+        // when the browser is cancelled. Never treat that as a successful sign-in.
+        if (result?.error) {
+          const label = provider.charAt(0).toUpperCase() + provider.slice(1);
+          throw new Error(
+            result.error.code === "PROVIDER_NOT_FOUND"
+              ? `${label} sign-in isn't available yet. Please use email, or continue without signing in.`
+              : result.error.message || `${label} sign-in failed. Please try again.`
+          );
+        }
+
+        const user = await fetchUser();
+        if (!user) {
+          throw new Error("Sign-in was cancelled or did not complete. Please try again.");
+        }
       }
     } catch (error: any) {
       console.error(`[Auth] ${provider} sign in failed:`, error?.message || error);
