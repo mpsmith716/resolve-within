@@ -4,6 +4,7 @@ import * as appSchema from './db/schema/schema.js';
 import * as authSchema from './db/schema/auth-schema.js';
 import { eq } from 'drizzle-orm';
 import { user } from './db/schema/auth-schema.js';
+import { buildSocialProviders, resolveAuthBaseURL, SOCIAL_TRUSTED_ORIGINS } from './auth-social.js';
 
 // Import route registration functions
 import { registerJournalRoutes } from './routes/journal.js';
@@ -31,15 +32,29 @@ export type App = typeof app;
 // Type assertion for app.auth (available after app.withAuth() is called)
 type AppWithAuth = App & { auth: any };
 
+// Google / Apple sign-in: each provider is enabled only when its env vars are set
+// (see ./auth-social.ts). Missing vars leave the provider off without crashing.
+const socialProviders = buildSocialProviders();
+const authBaseURL = resolveAuthBaseURL(process.env, socialProviders);
+app.logger.info(
+  { socialProviders: Object.keys(socialProviders), authBaseURL: authBaseURL ?? '(framework default)' },
+  '[auth] Social sign-in configuration',
+);
+
 // Enable authentication with Better Auth (Expo / native trusted origins)
 app.withAuth({
+  // OAuth redirect_uri is built from baseURL; without this the deployed service
+  // reports http://localhost:3001, which Google/Apple would reject.
+  ...(authBaseURL ? { baseURL: authBaseURL } : {}),
   trustedOrigins: [
     "resolvewithin://",
     "resolvewithin://*",
     "exp://",
     "exp://**",
     "exp://192.168.*.*:*/**",
+    ...SOCIAL_TRUSTED_ORIGINS,
   ],
+  socialProviders,
   plugins: [expo()],
   // Enables Better Auth POST /api/auth/delete-user (test cleanup + optional client path).
   // Primary product deletion remains DELETE /api/user/data (transactional app + identity wipe).

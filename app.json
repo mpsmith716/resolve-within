@@ -15,6 +15,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cypherwavestudios.resolvewithin",
+      "entitlements": {
+        "com.apple.developer.applesignin": [
+          "Default"
+        ]
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSUserNotificationsUsageDescription": "Resolve Within may send gentle reminders to help you pause, breathe, or check in during the day."
@@ -32,7 +37,7 @@
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",
