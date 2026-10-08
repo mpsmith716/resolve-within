@@ -25,6 +25,8 @@ import { getSafeGradient } from '@/constants/SafeDefaults';
 import { getTodayMessage, loadPersistedDailyMessage, DailyMessageData } from '@/constants/dailyMessages';
 import { getTodayReset, DailyResetData } from '@/constants/dailyResets';
 import ReportModal from '@/components/ReportModal';
+import BlockMemberModal from '@/components/BlockMemberModal';
+import { withoutPost } from '@/utils/blocking';
 
 type ActiveTab = 'home' | 'journal' | 'community';
 type MoodType = 'cloudy' | 'onEdge' | 'numbZone' | 'heavyHeart' | 'lightSpark';
@@ -50,6 +52,8 @@ interface JournalEntry { id: string; mood: string; content?: string; createdAt: 
 interface CommunityPost {
   id: string; authorName: string; isAnonymous: boolean; content: string;
   isPinned: boolean; likeCount: number; encourageCount: number; createdAt: string;
+  /** Set by the server; Block is hidden on your own posts. */
+  isOwnPost?: boolean;
   userInteraction?: { liked: boolean; encouraged: boolean };
 }
 
@@ -186,6 +190,7 @@ export default function HomeScreen() {
   const [interactingPost, setInteractingPost] = useState<string | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [selectedReportPostId, setSelectedReportPostId] = useState<string | null>(null);
+  const [blockPostId, setBlockPostId] = useState<string | null>(null);
 
   const safeGradient = getSafeGradient([colors.background, '#0a0e1a', colors.background]);
 
@@ -372,6 +377,13 @@ export default function HomeScreen() {
     } finally {
       setInteractingPost(null);
     }
+  };
+
+  const handleMemberBlocked = (postId: string) => {
+    console.log('[Home] Member blocked from post:', postId, '— hiding their content');
+    // Hide the post right away, then refetch so every post by that member disappears.
+    setPosts(prev => withoutPost(prev, postId));
+    fetchCommunityPosts(true);
   };
 
   const handleMoodPress = (moodType: MoodType) => {
@@ -702,6 +714,7 @@ export default function HomeScreen() {
                 const likeCountText = `❤️ ${post.likeCount}`;
                 const encourageCountText = `💪 ${post.encourageCount}`;
                 const flagText = "🚩";
+                const blockText = "🚫 Block";
                 
                 return (
                   <View key={post.id} style={[styles.postCard, post.isPinned && styles.postCardPinned]}>
@@ -734,9 +747,25 @@ export default function HomeScreen() {
                           setReportModalVisible(true);
                         }}
                         disabled={interactingPost === post.id}
+                        accessibilityRole="button"
+                        accessibilityLabel="Report this post"
                       >
                         <Text style={styles.postActionText}>{flagText}</Text>
                       </TouchableOpacity>
+                      {user && !post.isOwnPost ? (
+                        <TouchableOpacity
+                          style={styles.postActionBtn}
+                          onPress={() => {
+                            console.log('[Home] Tapped block on post:', post.id);
+                            setBlockPostId(post.id);
+                          }}
+                          disabled={interactingPost === post.id}
+                          accessibilityRole="button"
+                          accessibilityLabel="Block this member"
+                        >
+                          <Text style={styles.postActionText}>{blockText}</Text>
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
                   </View>
                 );
@@ -764,6 +793,12 @@ export default function HomeScreen() {
           }}
         />
       ) : null}
+      <BlockMemberModal
+        visible={!!blockPostId}
+        postId={blockPostId}
+        onClose={() => setBlockPostId(null)}
+        onBlocked={handleMemberBlocked}
+      />
       <View style={[styles.tabBar, { paddingTop: insets.top + 8 }]}>
         {(['home', 'journal', 'community'] as ActiveTab[]).map(tab => {
           const tabLabelText = tab === 'home' ? homeTabLabel : tab === 'journal' ? journalTabLabel : communityTabLabel;
@@ -987,7 +1022,7 @@ const styles = StyleSheet.create({
   postAuthor: { fontSize: 14, fontWeight: '700', color: colors.accent },
   postDate: { fontSize: 12, color: colors.textSecondary },
   postContent: { fontSize: 15, color: colors.text, lineHeight: 22, marginBottom: 12 },
-  postActions: { flexDirection: 'row', gap: 8 },
+  postActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   postActionBtn: { backgroundColor: colors.background, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.accent + '20' },
   postActionBtnActive: { backgroundColor: colors.accent + '20', borderColor: colors.accent },
   postActionText: { fontSize: 13, color: colors.text, fontWeight: '600' },

@@ -19,6 +19,7 @@ import { registerCrisisRoutes } from './routes/crisis.js';
 import { registerProgressRoutes } from './routes/progress.js';
 import { registerSetupRoutes } from './routes/setup.js';
 import { registerReportRoutes } from './routes/reports.js';
+import { registerBlockRoutes } from './routes/blocks.js';
 
 // Combine schemas
 const schema = { ...appSchema, ...authSchema };
@@ -112,6 +113,7 @@ registerCrisisRoutes(app);
 registerProgressRoutes(app);
 registerSetupRoutes(app);
 registerReportRoutes(app);
+registerBlockRoutes(app);
 
 await app.run();
 app.logger.info('Application running');

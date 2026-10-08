@@ -2,6 +2,7 @@ import type { App } from "../index.js";
 import { spotlightNominations, spotlightVotes, spotlightWinners, communityPosts } from "../db/schema/schema.js";
 import { eq, and, desc } from "drizzle-orm";
 import type { FastifyRequest, FastifyReply } from "fastify";
+import { hiddenAuthorIds, isBlockingReady } from "../lib/blocking.js";
 
 interface NominateBody {
   postId: string;
@@ -159,6 +160,11 @@ export function registerSpotlightRoutes(app: App) {
         .from(spotlightNominations)
         .where(eq(spotlightNominations.weekStart, weekStart));
 
+      // Skip nominations whose post author is blocked by (or has blocked) the viewer.
+      const hiddenAuthors = (await isBlockingReady(db))
+        ? await hiddenAuthorIds(db, session.user.id)
+        : new Set<string>();
+
       // Get vote counts and user votes
       const result = [];
       for (const nomination of nominations) {
@@ -173,6 +179,8 @@ export function registerSpotlightRoutes(app: App) {
           .select()
           .from(communityPosts)
           .where(eq(communityPosts.id, nomination.postId));
+
+        if (!post || hiddenAuthors.has(post.authorId)) continue;
 
         result.push({
           id: nomination.id,

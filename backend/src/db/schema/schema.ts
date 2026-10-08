@@ -6,10 +6,12 @@ import {
   integer,
   boolean,
   uniqueIndex,
+  index,
+  check,
   date,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema.js";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // Journal Entries
 export const journalEntries = pgTable("journal_entries", {
@@ -91,6 +93,37 @@ export const reportedPostsRelations = relations(reportedPosts, ({ one }) => ({
   }),
 }));
 
+
+// User Blocks — a member hides another member's community content (App Store guideline 1.2).
+// Both FKs cascade, so deleting either account removes the block rows.
+export const userBlocks = pgTable(
+  "user_blocks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    blockerId: text("blocker_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    blockedId: text("blocked_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    // Label shown in the blocker's "Blocked users" list, captured at block time
+    // ("Anonymous member" for anonymous posts, so blocking never reveals an identity).
+    displayName: text("display_name"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("user_blocks_pair_idx").on(table.blockerId, table.blockedId),
+    index("user_blocks_blocked_idx").on(table.blockedId),
+    check("user_blocks_not_self", sql`${table.blockerId} <> ${table.blockedId}`),
+  ]
+);
+
+export const userBlocksRelations = relations(userBlocks, ({ one }) => ({
+  blocker: one(user, {
+    fields: [userBlocks.blockerId],
+    references: [user.id],
+  }),
+  blocked: one(user, {
+    fields: [userBlocks.blockedId],
+    references: [user.id],
+  }),
+}));
 
 // Post Interactions (likes, encourages, flags)
 export const postInteractions = pgTable(
