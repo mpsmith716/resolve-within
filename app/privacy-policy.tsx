@@ -56,10 +56,10 @@ export default function PrivacyPolicyScreen() {
   const locationDisableText = 'Users could disable location access at any time through device settings.';
 
   const dataStorageTitle = 'Data Storage';
-  const dataStorageText = 'Signed-in features store account profile, journal entries, mood check-ins, community content, favorites, breathing history, and preferences on Resolve Within servers so they can sync across devices. Some preferences may also be cached locally on your device for app functionality.';
+  const dataStorageText = 'Signed-in features store account profile, journal entries, mood check-ins, community content, the list of members you have blocked, favorites, breathing history, and preferences on Resolve Within servers so they can sync across devices. Some preferences may also be cached locally on your device for app functionality.';
 
   const dataDeletionTitle = 'Data Deletion';
-  const dataDeletionText = 'Users can use Delete Account & Data in the app to permanently remove journal entries, mood history, community posts and reactions, favorites, breathing history, preferences, and the login identity from Resolve Within servers and this device. After successful deletion the same email/password cannot sign in; creating an account again starts a new identity. Limited moderation or admin audit records may be retained or removed according to the product deletion contract. After a successful deletion you are signed out immediately.';
+  const dataDeletionText = 'Users can use Delete Account & Data in the app to permanently remove journal entries, mood history, community posts and reactions, blocked-member lists, favorites, breathing history, preferences, and the login identity from Resolve Within servers and this device. After successful deletion the same email/password cannot sign in; creating an account again starts a new identity. Limited moderation or admin audit records may be retained or removed according to the product deletion contract. After a successful deletion you are signed out immediately.';
 
   const thirdPartyTitle = 'Third-Party Services';
   const thirdPartyText = 'The app may use third-party services for:';

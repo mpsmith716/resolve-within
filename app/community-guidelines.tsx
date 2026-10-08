@@ -50,6 +50,11 @@ const SECTIONS: { title: string; body: string }[] = [
       'If you see something that breaks these guidelines, use Report on the post. Reports help us review content — they are not an emergency response channel.',
   },
   {
+    title: 'Blocking',
+    body:
+      'You can block any member with Block on their post. You will no longer see their community posts, and they will not see yours. They are not notified, and you can unblock them anytime in Profile → Blocked Users.',
+  },
+  {
     title: 'Moderation and removal',
     body:
       'Resolve Within may hide or remove posts that violate these guidelines or that put community safety at risk. Decisions are made by reviewers when reports are reviewed; posts are not continuously monitored for emergencies.',

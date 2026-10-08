@@ -14,7 +14,9 @@ import {
   spotlightNominations,
   spotlightVotes,
   reportedPosts,
+  userBlocks,
 } from "../db/schema/schema.js";
+import { isBlockingReady } from "../lib/blocking.js";
 import { eq, and, or, like } from "drizzle-orm";
 import { verifyPassword } from "better-auth/crypto";
 import type { FastifyRequest, FastifyReply } from "fastify";
@@ -338,7 +340,18 @@ export function registerUserRoutes(app: App) {
           }
         }
 
+        const blockingReady = await isBlockingReady(db);
+
         await db.transaction(async (tx: typeof db) => {
+          if (blockingReady) {
+            // Blocks this user made and blocks against this user (both FKs also CASCADE).
+            const deletedBlocks = await tx
+              .delete(userBlocks)
+              .where(or(eq(userBlocks.blockerId, userId), eq(userBlocks.blockedId, userId)))
+              .returning();
+            app.logger.info({ userId, count: deletedBlocks.length }, "Deleted user blocks");
+          }
+
           const deletedVotes = await tx
             .delete(spotlightVotes)
             .where(eq(spotlightVotes.voterId, userId))

@@ -95,6 +95,7 @@ export default function RootLayout() {
               <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
               <Stack.Screen name="terms-of-service" options={{ headerShown: false }} />
               <Stack.Screen name="community-guidelines" options={{ headerShown: false }} />
+              <Stack.Screen name="blocked-users" options={{ headerShown: false }} />
               <Stack.Screen name="admin" options={{ headerShown: false }} />
               <Stack.Screen name="+not-found" />
             </Stack>

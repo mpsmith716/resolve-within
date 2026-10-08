@@ -470,6 +470,29 @@ export default function ProfileScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Privacy</Text>
+            {user ? (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  if (__DEV__) console.log('ProfileScreen: User tapped Blocked Users');
+                  router.push('/blocked-users' as any);
+                }}
+              >
+                <IconSymbol
+                  ios_icon_name="hand.raised.fill"
+                  android_material_icon_name="block"
+                  size={24}
+                  color={colors.accent}
+                />
+                <Text style={styles.menuItemText}>Blocked Users</Text>
+                <IconSymbol
+                  ios_icon_name="chevron.right"
+                  android_material_icon_name="arrow-forward"
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {

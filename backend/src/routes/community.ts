@@ -2,6 +2,7 @@ import type { App } from "../index.js";
 import { communityPosts, postInteractions } from "../db/schema/schema.js";
 import { eq, desc, and } from "drizzle-orm";
 import type { FastifyRequest, FastifyReply } from "fastify";
+import { isBlockingReady, notBlockedEitherWay } from "../lib/blocking.js";
 
 /** Keep in sync with constants/contentLimits.ts in the app. */
 export const COMMUNITY_POST_MAX_LENGTH = 2000;
@@ -63,6 +64,10 @@ export function registerCommunityRoutes(app: App) {
                 likeCount: { type: "number" },
                 encourageCount: { type: "number" },
                 createdAt: { type: "string", format: "date-time" },
+                isOwnPost: {
+                  type: "boolean",
+                  description: "True when the signed-in user wrote this post (the app hides Block on it)",
+                },
               },
             },
           },
@@ -85,13 +90,21 @@ export function registerCommunityRoutes(app: App) {
 
       app.logger.info({ community: request.params.community, limit, offset }, "Fetching community posts");
 
+      const viewerId = session.user.id;
+      // Hide posts from members the viewer blocked, and from members who blocked the viewer.
+      // Until the user_blocks migration is applied, the feed is served unfiltered rather than failing.
+      const blockFilter = (await isBlockingReady(db))
+        ? notBlockedEitherWay(db, viewerId, communityPosts.authorId)
+        : undefined;
+
       const posts = await db
         .select()
         .from(communityPosts)
         .where(
           and(
             eq(communityPosts.community, request.params.community as "veteran" | "healing_together"),
-            eq(communityPosts.isHidden, false)
+            eq(communityPosts.isHidden, false),
+            blockFilter
           )
         )
         .orderBy(desc(communityPosts.isPinned), desc(communityPosts.createdAt))
@@ -99,7 +112,10 @@ export function registerCommunityRoutes(app: App) {
         .offset(offset);
 
       app.logger.info({ count: posts.length }, "Community posts fetched");
-      return posts;
+      return posts.map((post: typeof communityPosts.$inferSelect) => ({
+        ...post,
+        isOwnPost: post.authorId === viewerId,
+      }));
     }
   );
 
@@ -144,6 +160,7 @@ export function registerCommunityRoutes(app: App) {
               likeCount: { type: "number" },
               encourageCount: { type: "number" },
               createdAt: { type: "string", format: "date-time" },
+              isOwnPost: { type: "boolean" },
             },
           },
           400: {
@@ -191,7 +208,7 @@ export function registerCommunityRoutes(app: App) {
 
       app.logger.info({ postId: post.id }, "Community post created successfully");
       reply.code(201);
-      return post;
+      return { ...post, isOwnPost: true };
     }
   );
 

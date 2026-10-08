@@ -56,7 +56,7 @@ export default function TermsOfServiceScreen() {
   const internationalText = 'International users should contact their local emergency services or crisis support lines.';
 
   const ugcIntroText = 'Community areas may include user-generated content (UGC) such as posts shared by other users.';
-  const ugcReportText = 'Users can report posts that appear to violate community guidelines or raise safety concerns.';
+  const ugcReportText = 'Users can report posts that appear to violate community guidelines or raise safety concerns, and can block other members so that neither sees the other’s community posts. Blocked members can be managed in Profile → Blocked Users.';
   const ugcModerationText = 'Resolve Within may moderate, hide, or remove community content that violates these Terms, Community Guidelines, or that we reasonably believe harms community safety.';
   const ugcNotEmergencyText = 'Reporting is not emergency monitoring. If you or someone else is in crisis, contact 988 or local emergency services.';
 

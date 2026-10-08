@@ -11,6 +11,7 @@ Authority is the **authenticated session user only**. Client-supplied `userId` /
 - OAuth-only accounts (no credential password): session auth is sufficient for V1.
 
 ### Deleted (application transaction)
+- `user_blocks` where the user is the blocker **or** the blocked member (both FKs are also `ON DELETE CASCADE`)
 - `spotlight_votes` (voter)
 - `spotlight_nominations` (nominator)
 - `post_interactions` (user)
@@ -54,6 +55,7 @@ On any failure the handler returns an error and **does not** claim success. Pref
 | `journal_entries` | **DELETE** / CASCADE | Explicit delete then user CASCADE |
 | `community_posts` (authored) | **DELETE** / CASCADE | |
 | `post_interactions` | **DELETE** / CASCADE | |
+| `user_blocks` (as blocker or blocked) | **DELETE** / CASCADE | Explicit delete in the transaction (both directions); FKs cascade on `user` delete |
 | `spotlight_nominations` | **DELETE** / CASCADE | |
 | `spotlight_votes` | **DELETE** / CASCADE | |
 | `spotlight_winners` | **CASCADE** via post | When authored posts deleted |
