@@ -66,6 +66,20 @@ export function buildSocialProviders(env: Env = process.env): Record<string, any
 }
 
 /**
+ * Which social sign-in buttons the app should show. Derived from the same env checks as
+ * buildSocialProviders, so a button only appears when the provider is actually enabled.
+ * Exposes booleans only — never client ids or secrets.
+ */
+export function enabledAuthProviders(
+  socialProviders: Record<string, unknown> = buildSocialProviders(),
+): { google: boolean; apple: boolean } {
+  return {
+    google: Boolean(socialProviders.google),
+    apple: Boolean(socialProviders.apple),
+  };
+}
+
+/**
  * Better Auth 1.4.5 quirk: Apple posts the user's name only once, in the form_post body, but the
  * callback first redirects POST -> GET and then reads the name from the (now empty) body. The
  * provider then falls back to the email (often a private-relay address, sometimes the real one)

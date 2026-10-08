@@ -11,6 +11,11 @@ No secrets in this file. Never paste client secrets, `.p8` keys, or the Apple JW
   No Android/iOS Google clients and no SHA-1 fingerprints.
 - `app/auth.tsx` shows **Sign In with Apple on iOS only** and Google on all platforms. That covers App Store Guideline 4.8 (iOS offers Apple next to Google).
   The Apple button is not needed on Android.
+- Each button appears **only when the backend has that provider enabled**: the sign-in screen calls the public
+  `GET /api/auth-providers` (returns `{ "google": bool, "apple": bool }` from the same env checks as
+  `backend/src/auth-social.ts`, booleans only) with a 5 s timeout, and hides both buttons on any failure.
+  So Apple stays hidden until the `APPLE_*` env vars are set on Render, then appears without an app update.
+  Note: Guideline 4.8 means that once Google is shown on iOS, Apple must be configured before App Store review.
 
 ## Fixed values
 | Item | Value |
@@ -74,6 +79,7 @@ No secrets in this file. Never paste client secrets, `.p8` keys, or the Apple JW
 A provider turns on only when both its ID and secret are set. Missing vars leave it off (404 `PROVIDER_NOT_FOUND`), and startup never fails.
 
 ### Verify after deploy (read-only)
+- `curl -s https://resolve-within-backend.onrender.com/api/auth-providers` shows which buttons the app will display.
 - Logs: `[auth] Social sign-in configuration` should show `socialProviders: ["google","apple"]` and `authBaseURL: "https://resolve-within-backend.onrender.com"`.
 - `curl -sI https://resolve-within-backend.onrender.com/api/auth/callback/google | grep -i location` should start with
   `https://resolve-within-backend.onrender.com/api/auth/error`. Before this change it was `http://localhost:3001/...`, which would break every OAuth redirect_uri.
