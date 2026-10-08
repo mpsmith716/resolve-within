@@ -4,7 +4,7 @@ import * as appSchema from './db/schema/schema.js';
 import * as authSchema from './db/schema/auth-schema.js';
 import { eq } from 'drizzle-orm';
 import { user } from './db/schema/auth-schema.js';
-import { buildSocialProviders, resolveAuthBaseURL, SOCIAL_TRUSTED_ORIGINS } from './auth-social.js';
+import { buildSocialProviders, enabledAuthProviders, resolveAuthBaseURL, SOCIAL_TRUSTED_ORIGINS } from './auth-social.js';
 
 // Import route registration functions
 import { registerJournalRoutes } from './routes/journal.js';
@@ -99,6 +99,29 @@ app.withAuth({
     app.logger.info({}, '[seed] Skipping reviewer seed (REVIEWER_EMAIL/REVIEWER_PASSWORD not set)');
   }
 }
+
+// GET /api/auth-providers - public: which social sign-in buttons the app should show.
+// Booleans only (no client ids/secrets). Apple turns on automatically once APPLE_* env vars are set.
+const authProviders = enabledAuthProviders(socialProviders);
+app.fastify.get(
+  '/api/auth-providers',
+  {
+    schema: {
+      description: 'Which social sign-in providers are enabled on this server',
+      tags: ['auth'],
+      response: {
+        200: {
+          type: 'object',
+          properties: { google: { type: 'boolean' }, apple: { type: 'boolean' } },
+        },
+      },
+    },
+  },
+  async (_request, reply) => {
+    reply.header('Cache-Control', 'public, max-age=300');
+    return authProviders;
+  },
+);
 
 // Register routes
 registerJournalRoutes(app);

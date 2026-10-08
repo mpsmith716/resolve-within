@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { safeReturnTo } from '@/utils/safeReturnTo';
+import { API_BASE_URL } from '@/lib/apiBaseUrl';
+import { fetchAuthProviders, getCachedAuthProviders, NO_SOCIAL_PROVIDERS, type AuthProviders } from '@/utils/authProviders';
 
 
 const GOLD = '#C9A84C';
@@ -51,6 +53,25 @@ export default function AuthScreen() {
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  // Social buttons appear only when the backend reports the provider as enabled
+  // (GET /api/auth-providers). Hidden while loading and on any failure.
+  const [providers, setProviders] = useState<AuthProviders>(() => getCachedAuthProviders() ?? NO_SOCIAL_PROVIDERS);
+
+  useEffect(() => {
+    let active = true;
+    fetchAuthProviders(API_BASE_URL).then((result) => {
+      if (active) setProviders(result);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const showApple = Platform.OS === 'ios' && providers.apple;
+  const showGoogle = providers.google;
+  const showSocial = showApple || showGoogle;
+  // Keep the existing look: on iOS Apple is the primary button and Google secondary.
+  const googleIsSecondary = Platform.OS === 'ios' && showApple;
 
   const contextKey = params.context ?? '';
   // Only allow in-app paths as a post-login target (no external URLs).
@@ -311,47 +332,53 @@ export default function AuthScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Divider */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            {showSocial ? (
+              <>
+                {/* Divider */}
+                <View style={styles.dividerRow}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or</Text>
+                  <View style={styles.dividerLine} />
+                </View>
 
-            {/* Apple sign in (iOS only) */}
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity
-                style={[styles.primaryButton, loading && styles.buttonDisabled]}
-                onPress={() => handleSocialAuth('apple')}
-                disabled={loading}
-                activeOpacity={0.85}
-              >
-                {loading ? (
-                  <ActivityIndicator color={NAVY_DARK} />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Sign In with Apple</Text>
+                {/* Apple sign in (iOS only, when enabled on the server) */}
+                {showApple && (
+                  <TouchableOpacity
+                    style={[styles.primaryButton, loading && styles.buttonDisabled]}
+                    onPress={() => handleSocialAuth('apple')}
+                    disabled={loading}
+                    activeOpacity={0.85}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color={NAVY_DARK} />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Sign In with Apple</Text>
+                    )}
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
-            )}
 
-            {/* Google sign in */}
-            <TouchableOpacity
-              style={[
-                Platform.OS === 'ios' ? styles.secondaryButton : styles.primaryButton,
-                loading && styles.buttonDisabled,
-              ]}
-              onPress={() => handleSocialAuth('google')}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              {loading ? (
-                <ActivityIndicator color={Platform.OS === 'ios' ? GOLD : NAVY_DARK} />
-              ) : (
-                <Text style={Platform.OS === 'ios' ? styles.secondaryButtonText : styles.primaryButtonText}>
-                  Sign In with Google
-                </Text>
-              )}
-            </TouchableOpacity>
+                {/* Google sign in (when enabled on the server) */}
+                {showGoogle && (
+                  <TouchableOpacity
+                    style={[
+                      googleIsSecondary ? styles.secondaryButton : styles.primaryButton,
+                      loading && styles.buttonDisabled,
+                    ]}
+                    onPress={() => handleSocialAuth('google')}
+                    disabled={loading}
+                    activeOpacity={0.85}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color={googleIsSecondary ? GOLD : NAVY_DARK} />
+                    ) : (
+                      <Text style={googleIsSecondary ? styles.secondaryButtonText : styles.primaryButtonText}>
+                        Sign In with Google
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : null}
 
             {/* Switch mode link */}
             <TouchableOpacity
