@@ -85,21 +85,29 @@ export default function FloatingTabBar({ tabs }: FloatingTabBarProps) {
       return;
     }
 
+    // Panic opens on top of the current screen so Back returns to where the user was.
+    if (tab.isPanic) {
+      router.push(tab.route);
+      return;
+    }
+
+    // Tab switches replace the current tab screen instead of pushing, so repeated taps
+    // don't pile up copies of Home/Veterans/Profile on the stack.
     // Set shared mode BEFORE navigate — Android may never expose ?tab= to this bar.
     if (tab.name === '(home)') {
       setHomeTabMode('home');
-      router.push({ pathname: '/(tabs)/(home)/', params: { tab: 'home' } } as any);
+      router.replace({ pathname: '/(tabs)/(home)/', params: { tab: 'home' } } as any);
       return;
     }
 
     if (tab.name === 'journal') {
       setHomeTabMode('journal');
-      router.push({ pathname: '/(tabs)/(home)/', params: { tab: 'journal' } } as any);
+      router.replace({ pathname: '/(tabs)/(home)/', params: { tab: 'journal' } } as any);
       return;
     }
 
     setHomeTabMode(null);
-    router.push(tab.route);
+    router.replace(tab.route);
   };
 
   return (

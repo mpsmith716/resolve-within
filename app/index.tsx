@@ -1,10 +1,60 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Redirect, useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LandingScreen() {
   const router = useRouter();
+  const { user, loading, needsOnboarding } = useAuth();
+  // Where a signed-in user should go; null until the onboarding check finishes.
+  const [signedInTarget, setSignedInTarget] = useState<'home' | 'onboarding' | null>(null);
+  // Never block the landing page (and the 911/988 message) on a slow network: after a few
+  // seconds of session restore, show it anyway; a restored session still redirects later.
+  const [restoreTimedOut, setRestoreTimedOut] = useState(false);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setRestoreTimedOut(true), 6000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (loading || !user) {
+      setSignedInTarget(null);
+      return;
+    }
+    let cancelled = false;
+    needsOnboarding()
+      .then((needs) => {
+        if (!cancelled) setSignedInTarget(needs ? 'onboarding' : 'home');
+      })
+      .catch(() => {
+        if (!cancelled) setSignedInTarget('home');
+      });
+    return () => {
+      cancelled = true;
+    };
+    // needsOnboarding is recreated each render; re-run only when the session changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user?.id]);
+
+  // Still restoring a saved session: show a spinner instead of flashing the landing page.
+  if (!restoreTimedOut && (loading || (user && !signedInTarget))) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#D4AF37" />
+      </View>
+    );
+  }
+
+  // Valid saved session: skip the landing/sign-in screens.
+  if (user && signedInTarget === 'onboarding') {
+    return <Redirect href="/onboarding" />;
+  }
+  if (user && signedInTarget === 'home') {
+    return <Redirect href="/(tabs)/(home)" />;
+  }
+
+  // No session (first launch, signed out, or guest): existing landing page.
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Resolve Within</Text>
@@ -41,6 +91,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#0B1220',
     padding: 24,
     justifyContent: 'center',
+  },
+  centered: {
+    alignItems: 'center',
   },
   title: {
     color: '#FFFFFF',

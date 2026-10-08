@@ -322,6 +322,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGitHub = () => signInWithSocial("github");
 
   const continueAsGuest = () => {
+    if (user) {
+      // A real session already exists: keep it. Guest mode must never clobber a signed-in user.
+      if (__DEV__) console.log("[Auth] Continue as guest ignored: already signed in");
+      setLoading(false);
+      return;
+    }
     if (__DEV__) console.log("[Auth] Continuing as guest");
     setIsGuest(true);
     setUser(null);

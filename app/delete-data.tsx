@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { clearAuthTokens } from '@/lib/auth';
 import { clearFavorites } from '@/utils/favorites';
 import { safeDeleteItem } from '@/utils/safeStorage';
+import { cancelAllScheduledNotifications } from '@/utils/notificationHelpers';
 
 const styles = StyleSheet.create({
   container: {
@@ -176,6 +177,7 @@ const styles = StyleSheet.create({
 
 async function clearLocalUserData(): Promise<void> {
   const secureKeys = [
+    'resolve_within_notifications',
     '@resolve_within_notifications',
     'crisis_disclaimer_shown',
     'message_preferences',
@@ -214,6 +216,13 @@ async function clearLocalUserData(): Promise<void> {
 
   try {
     await clearFavorites();
+  } catch {
+    // Continue — local best-effort
+  }
+
+  try {
+    // Reminders belong to the deleted account's settings; stop them too.
+    await cancelAllScheduledNotifications();
   } catch {
     // Continue — local best-effort
   }

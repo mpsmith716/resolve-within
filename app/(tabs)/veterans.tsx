@@ -63,10 +63,13 @@ export default function VeteransCornerScreen() {
   const handleOpenURL = async (url: string, label: string) => {
     if (!url) return;
     console.log(`Veterans: Opening resource link — ${label}:`, url);
-    const supported = await Linking.canOpenURL(url);
-    if (supported) {
+    // Open directly (same as Crisis Resources / Panic). Linking.canOpenURL returns false on
+    // Android 11+ for tel:/sms: unless the scheme is declared in <queries>, which made the
+    // Veterans Crisis Line buttons fail even on phones that can call/text.
+    try {
       await Linking.openURL(url);
-    } else {
+    } catch (err) {
+      console.warn(`Veterans: Could not open ${label}:`, err);
       Alert.alert('Unable to open', `Could not open: ${url}`);
     }
   };

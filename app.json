@@ -21,8 +21,7 @@
         ]
       },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSUserNotificationsUsageDescription": "Resolve Within may send gentle reminders to help you pause, breathe, or check in during the day."
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -35,9 +34,15 @@
         "android.permission.POST_NOTIFICATIONS"
       ],
       "blockedPermissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ],
-      "versionCode": 4
+      "versionCode": 5
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",
@@ -63,7 +68,8 @@
           "androidCollapsedTitle": "Resolve Within",
           "iosDisplayInForeground": true
         }
-      ]
+      ],
+      "./plugins/withAndroidLinkQueries"
     ],
     "scheme": "resolvewithin",
     "experiments": {

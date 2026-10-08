@@ -3,6 +3,9 @@ import { journalEntries } from "../db/schema/schema.js";
 import { eq, desc } from "drizzle-orm";
 import type { FastifyRequest, FastifyReply } from "fastify";
 
+/** Keep in sync with constants/contentLimits.ts in the app. */
+export const JOURNAL_ENTRY_MAX_LENGTH = 5000;
+
 interface CreateJournalBody {
   mood: "cloudy" | "onEdge" | "numb" | "heavy" | "light";
   content?: string;
@@ -35,7 +38,8 @@ export function registerJournalRoutes(app: App) {
             },
             content: {
               type: "string",
-              description: "Optional journal content",
+              maxLength: JOURNAL_ENTRY_MAX_LENGTH,
+              description: `Optional journal content (max ${JOURNAL_ENTRY_MAX_LENGTH} characters)`,
             },
           },
         },
@@ -51,6 +55,10 @@ export function registerJournalRoutes(app: App) {
               createdAt: { type: "string", format: "date-time" },
             },
           },
+          400: {
+            type: "object",
+            properties: { error: { type: "string" } },
+          },
           401: {
             type: "object",
             properties: { error: { type: "string" } },
@@ -61,6 +69,12 @@ export function registerJournalRoutes(app: App) {
     async (request: FastifyRequest<{ Body: CreateJournalBody }>, reply: FastifyReply) => {
       const session = await requireAuth(request, reply);
       if (!session) return;
+
+      const content = request.body.content;
+      if (typeof content === "string" && content.length > JOURNAL_ENTRY_MAX_LENGTH) {
+        reply.code(400);
+        return { error: `Journal entries can be up to ${JOURNAL_ENTRY_MAX_LENGTH} characters.` };
+      }
 
       app.logger.info({ userId: session.user.id, mood: request.body.mood }, "Creating journal entry");
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { Platform } from "react-native";
+import { Redirect } from "expo-router";
 
 type Status = "processing" | "success" | "error";
 
@@ -42,6 +43,13 @@ export default function AuthCallbackScreen() {
       console.error("Auth callback error:", err);
     }
   };
+
+  // Native: the OAuth result is handled by AuthContext/auth.tsx (the browser session returns
+  // to the app). If the deep link also lands here, don't sit on "Processing…": hand off to
+  // the index route, which sends signed-in users Home (or to onboarding).
+  if (Platform.OS !== "web") {
+    return <Redirect href="/" />;
+  }
 
   return (
     <View style={styles.container}>
