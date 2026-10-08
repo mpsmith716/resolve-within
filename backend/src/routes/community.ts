@@ -3,6 +3,9 @@ import { communityPosts, postInteractions } from "../db/schema/schema.js";
 import { eq, desc, and } from "drizzle-orm";
 import type { FastifyRequest, FastifyReply } from "fastify";
 
+/** Keep in sync with constants/contentLimits.ts in the app. */
+export const COMMUNITY_POST_MAX_LENGTH = 2000;
+
 interface CreatePostBody {
   content: string;
   isAnonymous?: boolean;
@@ -121,7 +124,11 @@ export function registerCommunityRoutes(app: App) {
           type: "object",
           required: ["content"],
           properties: {
-            content: { type: "string", description: "Post content" },
+            content: {
+              type: "string",
+              maxLength: COMMUNITY_POST_MAX_LENGTH,
+              description: `Post content (max ${COMMUNITY_POST_MAX_LENGTH} characters)`,
+            },
             isAnonymous: { type: "boolean", default: true },
           },
         },
@@ -139,6 +146,10 @@ export function registerCommunityRoutes(app: App) {
               createdAt: { type: "string", format: "date-time" },
             },
           },
+          400: {
+            type: "object",
+            properties: { error: { type: "string" } },
+          },
           401: {
             type: "object",
             properties: { error: { type: "string" } },
@@ -152,6 +163,12 @@ export function registerCommunityRoutes(app: App) {
     ) => {
       const session = await requireAuth(request, reply);
       if (!session) return;
+
+      const content = request.body.content;
+      if (typeof content === "string" && content.length > COMMUNITY_POST_MAX_LENGTH) {
+        reply.code(400);
+        return { error: `Posts can be up to ${COMMUNITY_POST_MAX_LENGTH} characters.` };
+      }
 
       const isAnonymous = request.body.isAnonymous ?? true;
       const authorName = isAnonymous ? "Anonymous" : session.user.name;

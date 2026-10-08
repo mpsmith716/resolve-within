@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { safeReturnTo } from '@/utils/safeReturnTo';
 
 
 const GOLD = '#C9A84C';
@@ -52,7 +53,8 @@ export default function AuthScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const contextKey = params.context ?? '';
-  const returnTo = params.returnTo ?? '';
+  // Only allow in-app paths as a post-login target (no external URLs).
+  const returnTo = safeReturnTo(params.returnTo);
   const contextMessage = CONTEXT_MESSAGES[contextKey] ?? DEFAULT_MESSAGE;
 
   const titleText = mode === 'signin' ? 'Welcome Back' : 'Create Account';

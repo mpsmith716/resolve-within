@@ -110,6 +110,78 @@ export async function scheduleNotification(options: {
 }
 
 /**
+ * Cancel scheduled notifications that belong to one reminder: anything scheduled with
+ * `identifier`, plus (when `legacyTitle` is given) older copies scheduled without an
+ * identifier by earlier app versions, matched by title. Other reminders are untouched.
+ * No-ops in Expo Go.
+ */
+export async function cancelReminder(identifier: string, legacyTitle?: string): Promise<void> {
+  if (isExpoGo) {
+    console.log(`📱 Expo Go: Reminder "${identifier}" canceled (placeholder)`);
+    return;
+  }
+
+  try {
+    const Notifications = getNotifications();
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const matches = scheduled.filter(
+      (n) =>
+        n.identifier === identifier ||
+        (!!legacyTitle && n.content?.title === legacyTitle)
+    );
+    for (const n of matches) {
+      await Notifications.cancelScheduledNotificationAsync(n.identifier);
+    }
+    // Also cancel by identifier directly in case the list was incomplete.
+    await Notifications.cancelScheduledNotificationAsync(identifier).catch(() => undefined);
+    console.log(`🔔 Canceled reminder "${identifier}" (${matches.length} scheduled)`);
+  } catch (error) {
+    console.warn(`❌ Error canceling reminder "${identifier}":`, error);
+  }
+}
+
+/**
+ * Schedule one daily reminder under a fixed identifier. Any existing copy of the same
+ * reminder (same identifier, or a legacy copy with the same title) is canceled first,
+ * so turning a reminder on repeatedly never creates duplicates.
+ * No-ops in Expo Go.
+ */
+export async function scheduleDailyReminder(
+  identifier: string,
+  options: { title: string; body: string; hour: number; minute: number }
+): Promise<string | null> {
+  if (isExpoGo) {
+    console.log(
+      `📱 Expo Go: Reminder "${identifier}" scheduled (placeholder) at ${options.hour}:${String(options.minute).padStart(2, '0')}`
+    );
+    return identifier;
+  }
+
+  try {
+    await cancelReminder(identifier, options.title);
+    const Notifications = getNotifications();
+    const id = await Notifications.scheduleNotificationAsync({
+      identifier,
+      content: {
+        title: options.title,
+        body: options.body,
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour: options.hour,
+        minute: options.minute,
+      },
+    });
+    console.log(`✅ Reminder scheduled with ID: ${id}`);
+    return id;
+  } catch (error) {
+    console.warn(`❌ Error scheduling reminder "${identifier}":`, error);
+    return null;
+  }
+}
+
+/**
  * Cancel all scheduled notifications.
  * No-ops in Expo Go.
  */

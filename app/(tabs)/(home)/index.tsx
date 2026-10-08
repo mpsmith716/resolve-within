@@ -20,6 +20,7 @@ import { useFloatingTabActive } from '@/contexts/FloatingTabActiveContext';
 import { apiGet, authenticatedGet, authenticatedPost, authenticatedDelete } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppModal } from '@/components/ErrorBoundary';
+import { JOURNAL_ENTRY_MAX_LENGTH, COMMUNITY_POST_MAX_LENGTH } from '@/constants/contentLimits';
 import { getSafeGradient } from '@/constants/SafeDefaults';
 import { getTodayMessage, loadPersistedDailyMessage, DailyMessageData } from '@/constants/dailyMessages';
 import { getTodayReset, DailyResetData } from '@/constants/dailyResets';
@@ -168,6 +169,7 @@ export default function HomeScreen() {
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [selectedMood, setSelectedMood] = useState<string>('cloudy');
   const [journalContent, setJournalContent] = useState('');
+  const [journalSaveError, setJournalSaveError] = useState('');
   const [savingEntry, setSavingEntry] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{ visible: boolean; entryId: string }>({ visible: false, entryId: '' });
   const [deletingEntry, setDeletingEntry] = useState(false);
@@ -178,6 +180,7 @@ export default function HomeScreen() {
   const [postsRefreshing, setPostsRefreshing] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
   const [postContent, setPostContent] = useState('');
+  const [postSaveError, setPostSaveError] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [savingPost, setSavingPost] = useState(false);
   const [interactingPost, setInteractingPost] = useState<string | null>(null);
@@ -280,6 +283,11 @@ export default function HomeScreen() {
   }, [activeTab, communityType, user, fetchCommunityPosts]);
 
   const handleSaveJournalEntry = async () => {
+    setJournalSaveError('');
+    if (journalContent.trim().length > JOURNAL_ENTRY_MAX_LENGTH) {
+      setJournalSaveError(`Journal entries can be up to ${JOURNAL_ENTRY_MAX_LENGTH} characters.`);
+      return;
+    }
     setSavingEntry(true);
     try {
       console.log('[Home] Creating journal entry with mood:', selectedMood);
@@ -294,6 +302,7 @@ export default function HomeScreen() {
       console.log('[Home] Journal entry created successfully');
     } catch (error: any) {
       console.error('[Home] Failed to create journal entry:', error?.message || error);
+      setJournalSaveError("Your entry couldn't be saved. Check your connection and try again. Your text is still here.");
     } finally {
       setSavingEntry(false);
     }
@@ -317,6 +326,11 @@ export default function HomeScreen() {
 
   const handleCreatePost = async () => {
     if (!postContent.trim()) return;
+    setPostSaveError('');
+    if (postContent.trim().length > COMMUNITY_POST_MAX_LENGTH) {
+      setPostSaveError(`Posts can be up to ${COMMUNITY_POST_MAX_LENGTH} characters.`);
+      return;
+    }
     setSavingPost(true);
     try {
       console.log('[Home] Creating community post in:', communityType);
@@ -330,6 +344,7 @@ export default function HomeScreen() {
       console.log('[Home] Community post created successfully in', communityType);
     } catch (error: any) {
       console.error('[Home] Failed to create post:', error?.message || error);
+      setPostSaveError("Your post couldn't be shared. Check your connection and try again. Your text is still here.");
     } finally {
       setSavingPost(false);
     }
@@ -523,13 +538,16 @@ export default function HomeScreen() {
               placeholder={journalPlaceholder}
               placeholderTextColor={colors.textSecondary + '80'}
               value={journalContent}
-              onChangeText={setJournalContent}
+              onChangeText={(text) => { setJournalContent(text); setJournalSaveError(''); }}
+              maxLength={JOURNAL_ENTRY_MAX_LENGTH}
               multiline
               numberOfLines={6}
               textAlignVertical="top"
             />
+            <Text style={styles.charCount}>{`${journalContent.length}/${JOURNAL_ENTRY_MAX_LENGTH}`}</Text>
+            {journalSaveError ? <Text style={styles.saveErrorText}>{journalSaveError}</Text> : null}
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowNewEntry(false); setJournalContent(''); }}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowNewEntry(false); setJournalContent(''); setJournalSaveError(''); }}>
                 <Text style={styles.cancelBtnText}>{cancelText}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.saveBtn, savingEntry && { opacity: 0.7 }]} onPress={handleSaveJournalEntry} disabled={savingEntry}>
@@ -633,11 +651,14 @@ export default function HomeScreen() {
               placeholder={sharePlaceholder}
               placeholderTextColor={colors.textSecondary + '80'}
               value={postContent}
-              onChangeText={setPostContent}
+              onChangeText={(text) => { setPostContent(text); setPostSaveError(''); }}
+              maxLength={COMMUNITY_POST_MAX_LENGTH}
               multiline
               numberOfLines={5}
               textAlignVertical="top"
             />
+            <Text style={styles.charCount}>{`${postContent.length}/${COMMUNITY_POST_MAX_LENGTH}`}</Text>
+            {postSaveError ? <Text style={styles.saveErrorText}>{postSaveError}</Text> : null}
             <TouchableOpacity style={styles.anonymousToggle} onPress={() => setIsAnonymous(!isAnonymous)}>
               <Text style={styles.anonymousToggleText}>
                 {isAnonymous ? postingAsAnonymous : postingAsUser}
@@ -645,7 +666,7 @@ export default function HomeScreen() {
               <Text style={styles.anonymousToggleHint}>{toggleHint}</Text>
             </TouchableOpacity>
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowNewPost(false); setPostContent(''); }}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowNewPost(false); setPostContent(''); setPostSaveError(''); }}>
                 <Text style={styles.cancelBtnText}>{cancelText}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.saveBtn, (savingPost || !postContent.trim()) && { opacity: 0.7 }]} onPress={handleCreatePost} disabled={savingPost || !postContent.trim()}>
@@ -923,6 +944,8 @@ const styles = StyleSheet.create({
     fontSize: 15, minHeight: 120, marginBottom: 16, borderWidth: 1, borderColor: colors.accent + '20',
   },
   buttonRow: { flexDirection: 'row', gap: 12 },
+  charCount: { fontSize: 12, color: colors.textSecondary, textAlign: 'right', marginTop: -8, marginBottom: 12 },
+  saveErrorText: { fontSize: 14, lineHeight: 20, color: '#F87171', marginBottom: 12 },
   cancelBtn: { flex: 1, backgroundColor: colors.card, borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: colors.textSecondary + '30' },
   cancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
   saveBtn: { flex: 1, backgroundColor: colors.accent, borderRadius: 12, padding: 16, alignItems: 'center' },

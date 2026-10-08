@@ -20,11 +20,14 @@ import { IconSymbol } from '@/components/IconSymbol';
 import {
   isExpoGo,
   requestNotificationPermissions,
-  scheduleNotification,
+  scheduleDailyReminder,
+  cancelReminder,
   cancelAllScheduledNotifications,
 } from '@/utils/notificationHelpers';
 
-const STORAGE_KEY = '@resolve_within_notifications';
+// SecureStore keys may only contain letters, digits, '.', '-' and '_'. The old key
+// ('@resolve_within_notifications') was invalid, so settings never saved; nothing to migrate.
+const STORAGE_KEY = 'resolve_within_notifications';
 
 interface NotificationSettings {
   pushNotifications: boolean;
@@ -32,6 +35,37 @@ interface NotificationSettings {
   journalReminder: boolean;
   crisisSupportReminder: boolean;
 }
+
+type ReminderKey = 'dailyMessageReminder' | 'journalReminder' | 'crisisSupportReminder';
+
+// Each reminder has its own fixed notification identifier so it can be scheduled and
+// canceled on its own (turning one off must not cancel the others).
+const REMINDERS: Record<
+  ReminderKey,
+  { identifier: string; title: string; body: string; hour: number; minute: number }
+> = {
+  dailyMessageReminder: {
+    identifier: 'resolve-within-daily-message-reminder',
+    title: 'Daily Message',
+    body: 'Your daily message is ready. Take a moment for yourself.',
+    hour: 9,
+    minute: 0,
+  },
+  journalReminder: {
+    identifier: 'resolve-within-journal-reminder',
+    title: 'Journal Reminder',
+    body: 'Take a moment to reflect and journal your thoughts.',
+    hour: 20,
+    minute: 0,
+  },
+  crisisSupportReminder: {
+    identifier: 'resolve-within-crisis-support-reminder',
+    title: 'You Are Not Alone',
+    body: 'Remember: You have support. Take a breath. You are stronger than you know.',
+    hour: 12,
+    minute: 0,
+  },
+};
 
 const DEFAULT_SETTINGS: NotificationSettings = {
   pushNotifications: false,
@@ -102,33 +136,6 @@ export default function NotificationsScreen() {
     }
   };
 
-  const scheduleDailyMessageReminder = async () => {
-    await scheduleNotification({
-      title: 'Daily Message',
-      body: 'Your daily message is ready. Take a moment for yourself.',
-      hour: 9,
-      minute: 0,
-    });
-  };
-
-  const scheduleJournalReminder = async () => {
-    await scheduleNotification({
-      title: 'Journal Reminder',
-      body: 'Take a moment to reflect and journal your thoughts.',
-      hour: 20,
-      minute: 0,
-    });
-  };
-
-  const scheduleCrisisSupportReminder = async () => {
-    await scheduleNotification({
-      title: 'You Are Not Alone',
-      body: 'Remember: You have support. Take a breath. You are stronger than you know.',
-      hour: 12,
-      minute: 0,
-    });
-  };
-
   const handlePushNotificationsToggle = async (value: boolean) => {
     console.log('NotificationsScreen: Push Notifications toggled to', value);
 
@@ -168,8 +175,8 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleDailyMessageReminderToggle = async (value: boolean) => {
-    console.log('NotificationsScreen: Daily Message Reminder toggled to', value);
+  const handleReminderToggle = async (key: ReminderKey, value: boolean) => {
+    console.log(`NotificationsScreen: ${key} toggled to`, value);
 
     if (value && !settings.pushNotifications) {
       Alert.alert(
@@ -180,59 +187,25 @@ export default function NotificationsScreen() {
       return;
     }
 
-    const newSettings = { ...settings, dailyMessageReminder: value };
+    const newSettings = { ...settings, [key]: value };
     await saveSettings(newSettings);
 
+    const reminder = REMINDERS[key];
     if (value) {
-      await scheduleDailyMessageReminder();
+      // Replaces any existing copy of this reminder, so re-enabling never duplicates.
+      await scheduleDailyReminder(reminder.identifier, reminder);
     } else {
-      await cancelAllScheduledNotifications();
+      // Cancel only this reminder; the others stay scheduled.
+      await cancelReminder(reminder.identifier, reminder.title);
     }
   };
 
-  const handleJournalReminderToggle = async (value: boolean) => {
-    console.log('NotificationsScreen: Journal Reminder toggled to', value);
-
-    if (value && !settings.pushNotifications) {
-      Alert.alert(
-        'Enable Push Notifications',
-        'Please enable Push Notifications first to receive reminders.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    const newSettings = { ...settings, journalReminder: value };
-    await saveSettings(newSettings);
-
-    if (value) {
-      await scheduleJournalReminder();
-    } else {
-      await cancelAllScheduledNotifications();
-    }
-  };
-
-  const handleCrisisSupportReminderToggle = async (value: boolean) => {
-    console.log('NotificationsScreen: Crisis Support Reminder toggled to', value);
-
-    if (value && !settings.pushNotifications) {
-      Alert.alert(
-        'Enable Push Notifications',
-        'Please enable Push Notifications first to receive reminders.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    const newSettings = { ...settings, crisisSupportReminder: value };
-    await saveSettings(newSettings);
-
-    if (value) {
-      await scheduleCrisisSupportReminder();
-    } else {
-      await cancelAllScheduledNotifications();
-    }
-  };
+  const handleDailyMessageReminderToggle = (value: boolean) =>
+    handleReminderToggle('dailyMessageReminder', value);
+  const handleJournalReminderToggle = (value: boolean) =>
+    handleReminderToggle('journalReminder', value);
+  const handleCrisisSupportReminderToggle = (value: boolean) =>
+    handleReminderToggle('crisisSupportReminder', value);
 
   if (loading) {
     return (
