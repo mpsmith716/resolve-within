@@ -12,6 +12,7 @@ import {
   Platform,
   BackHandler,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { IconSymbol } from '@/components/IconSymbol';
 
@@ -35,7 +36,7 @@ export default function PrivacyPolicyScreen() {
     return () => subscription.remove();
   }, [handleClose]);
 
-  const effectiveDateText = 'Effective Date: March 2026';
+  const effectiveDateText = 'Effective Date: October 14, 2026';
   const appNameText = 'Resolve Within';
   const projectNameText = 'The Resolve Within Project';
 
@@ -62,16 +63,22 @@ export default function PrivacyPolicyScreen() {
   const dataDeletionText = 'Users can use Delete Account & Data in the app to permanently remove journal entries, mood history, community posts and reactions, blocked-member lists, favorites, breathing history, preferences, and the login identity from Resolve Within servers and this device. After successful deletion the same email/password cannot sign in; creating an account again starts a new identity. Limited moderation or admin audit records may be retained or removed according to the product deletion contract. After a successful deletion you are signed out immediately.';
 
   const thirdPartyTitle = 'Third-Party Services';
-  const thirdPartyText = 'The app may use third-party services for:';
-  const thirdParty1 = 'Optional outbound links to maps or support directories (no device location required today)';
-  const thirdParty2 = 'Analytics and app performance monitoring';
-  const thirdParty3 = 'Crash reporting and error tracking';
-  const thirdPartyDisclaimerText = 'These services have their own privacy policies and data handling practices.';
+  const thirdPartyText = 'Resolve Within relies on a small number of service providers:';
+  const thirdParty1 = 'Render (hosts our app server), Neon (hosts our database), and Expo (app build and delivery tools)';
+  const thirdParty2 = 'Google sign-in (and Apple sign-in when available), only if you choose to use it';
+  const thirdParty3 = 'Optional outbound links to support directories or phone numbers you choose to open';
+  const thirdPartyDisclaimerText = 'The app contains no ads, no advertising identifiers, and no third-party analytics or crash-reporting tools. Sign-in providers and app stores handle data under their own privacy policies.';
 
   const securityTitle = 'Security';
   const securityText = 'We implement reasonable security practices to protect your information. However, no method of electronic storage or transmission is 100% secure. While we strive to protect your data, we cannot guarantee absolute security.';
 
   const policyUpdatesTitle = 'Policy Updates';
+  const contactTitle = 'Contact Us';
+  const contactEmail = 'contact@theresolvewithinproject.org';
+  const contactText = 'Questions or privacy requests? Email us at:';
+  const fullPolicyUrl = 'https://help.theresolvewithinproject.org/privacy';
+  const fullPolicyText = 'Read the full Privacy Policy online';
+
   const policyUpdatesText = 'This Privacy Policy may be updated as the app evolves and new features are added. Continued use of the app after policy updates constitutes acceptance of the revised policy.';
 
   return (
@@ -208,6 +215,26 @@ export default function PrivacyPolicyScreen() {
             <Text style={styles.paragraph}>{policyUpdatesText}</Text>
           </View>
 
+          {/* Section 9: Contact */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{contactTitle}</Text>
+            <Text style={styles.paragraph}>{contactText}</Text>
+            <Text
+              style={[styles.paragraph, styles.link]}
+              accessibilityRole="link"
+              onPress={() => Linking.openURL(`mailto:${contactEmail}`).catch(() => {})}
+            >
+              {contactEmail}
+            </Text>
+            <Text
+              style={[styles.paragraph, styles.link]}
+              accessibilityRole="link"
+              onPress={() => Linking.openURL(fullPolicyUrl).catch(() => {})}
+            >
+              {fullPolicyText}
+            </Text>
+          </View>
+
           <View style={styles.divider} />
 
           <Text style={styles.footerText}>
@@ -255,6 +282,10 @@ const styles = StyleSheet.create({
     fontWeight: FontWeights.bold,
     color: colors.text,
     marginBottom: 12,
+  },
+  link: {
+    color: colors.primary,
+    textDecorationLine: 'underline',
   },
   paragraph: {
     fontSize: 15,
