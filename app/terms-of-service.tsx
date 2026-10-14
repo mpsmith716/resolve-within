@@ -12,6 +12,7 @@ import {
   Platform,
   BackHandler,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { IconSymbol } from '@/components/IconSymbol';
 
@@ -35,9 +36,12 @@ export default function TermsOfServiceScreen() {
     return () => subscription.remove();
   }, [handleClose]);
 
-  const effectiveDateText = 'Effective Date: March 2026';
+  const effectiveDateText = 'Effective Date: October 14, 2026';
   const appNameText = 'Resolve Within';
   const projectNameText = 'The Resolve Within Project';
+
+  const contactEmail = 'contact@theresolvewithinproject.org';
+  const fullTermsUrl = 'https://help.theresolvewithinproject.org/terms';
 
   const introText = 'Please read these Terms of Service carefully before using the Resolve Within app. By using this app, you acknowledge and agree to these terms.';
 
@@ -236,6 +240,26 @@ export default function TermsOfServiceScreen() {
             </View>
           </View>
 
+          {/* Section 9: Contact */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>9. Contact</Text>
+            <Text style={styles.paragraph}>Questions about these terms, or want to report a problem? Email us at:</Text>
+            <Text
+              style={[styles.paragraph, styles.link]}
+              accessibilityRole="link"
+              onPress={() => Linking.openURL(`mailto:${contactEmail}`).catch(() => {})}
+            >
+              {contactEmail}
+            </Text>
+            <Text
+              style={[styles.paragraph, styles.link]}
+              accessibilityRole="link"
+              onPress={() => Linking.openURL(fullTermsUrl).catch(() => {})}
+            >
+              Read the full Terms of Use online
+            </Text>
+          </View>
+
           <View style={styles.divider} />
 
           <Text style={styles.footerText}>
@@ -283,6 +307,10 @@ const styles = StyleSheet.create({
     fontWeight: FontWeights.bold,
     color: colors.text,
     marginBottom: 12,
+  },
+  link: {
+    color: colors.primary,
+    textDecorationLine: 'underline',
   },
   paragraph: {
     fontSize: 15,
