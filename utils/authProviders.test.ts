@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchAuthProviders, parseAuthProviders, NO_SOCIAL_PROVIDERS } from './authProviders';
+import { fetchAuthProviders, parseAuthProviders, NO_SOCIAL_PROVIDERS, visibleSocialProviders } from './authProviders';
 
 const ok = (body: unknown) =>
   (async () => ({ ok: true, json: async () => body }) as unknown as Response) as unknown as typeof fetch;
@@ -40,4 +40,10 @@ test('fetchAuthProviders hides buttons on error, non-200 and timeout', async () 
   const started = Date.now();
   assert.deepEqual(await fetchAuthProviders('https://x', 50, hanging), NO_SOCIAL_PROVIDERS);
   assert.ok(Date.now() - started < 1000);
+});
+
+test('iOS hides Google unless Apple is also enabled (App Review 4.8)', () => {
+  assert.deepEqual(visibleSocialProviders({ google: true, apple: false }, 'ios'), { google: false, apple: false });
+  assert.deepEqual(visibleSocialProviders({ google: true, apple: true }, 'ios'), { google: true, apple: true });
+  assert.deepEqual(visibleSocialProviders({ google: true, apple: true }, 'android'), { google: true, apple: false });
 });

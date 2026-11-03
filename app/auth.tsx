@@ -19,7 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { safeReturnTo } from '@/utils/safeReturnTo';
 import { API_BASE_URL } from '@/lib/apiBaseUrl';
-import { fetchAuthProviders, getCachedAuthProviders, NO_SOCIAL_PROVIDERS, type AuthProviders } from '@/utils/authProviders';
+import { fetchAuthProviders, getCachedAuthProviders, NO_SOCIAL_PROVIDERS, visibleSocialProviders, type AuthProviders } from '@/utils/authProviders';
 
 
 const GOLD = '#C9A84C';
@@ -67,8 +67,9 @@ export default function AuthScreen() {
     };
   }, []);
 
-  const showApple = Platform.OS === 'ios' && providers.apple;
-  const showGoogle = providers.google;
+  const visible = visibleSocialProviders(providers, Platform.OS);
+  const showApple = visible.apple;
+  const showGoogle = visible.google;
   const showSocial = showApple || showGoogle;
   // Keep the existing look: on iOS Apple is the primary button and Google secondary.
   const googleIsSecondary = Platform.OS === 'ios' && showApple;
@@ -136,7 +137,13 @@ export default function AuthScreen() {
       }
     } catch (error: any) {
       console.error('[Auth] Email auth error:', error?.message || error);
-      setErrorMessage(error?.message || 'Unable to sign in. Please check your details and try again.');
+      const raw = String(error?.message || '');
+      const isNetwork = error?.name === 'AbortError' || /abort|timed? ?out|network request failed|failed to fetch/i.test(raw);
+      setErrorMessage(
+        isNetwork
+          ? "We couldn't reach the server. Please check your connection and try again."
+          : raw || 'Unable to sign in. Please check your details and try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -432,6 +439,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
   },
   iconContainer: {
     marginBottom: 16,
@@ -552,6 +562,8 @@ const styles = StyleSheet.create({
   // Email form styles
   formContainer: {
     width: '100%',
+    // iPad: keep the form a readable width instead of stretching edge to edge.
+    maxWidth: 480,
     marginBottom: 4,
   },
   fieldWrapper: {
