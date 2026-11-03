@@ -17,6 +17,19 @@ export function parseAuthProviders(value: unknown): AuthProviders {
 
 let cached: AuthProviders | null = null;
 
+/**
+ * Which social buttons to render on a platform.
+ * iOS (App Review 4.8): a third-party login (Google) may only appear when Sign in with Apple
+ * is also offered, so on iOS Google is shown only if Apple is enabled too.
+ */
+export function visibleSocialProviders(providers: AuthProviders, os: string): AuthProviders {
+  if (os === 'ios') {
+    return { apple: providers.apple, google: providers.google && providers.apple };
+  }
+  return { apple: false, google: providers.google };
+}
+
+
 /** Last successful answer this session (lets a re-opened sign-in screen render instantly). */
 export function getCachedAuthProviders(): AuthProviders | null {
   return cached;

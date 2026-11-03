@@ -42,6 +42,8 @@ export const authClient = createAuthClient({
     }),
   ],
   fetchOptions: {
+    // Fail with a clear error instead of spinning forever on a stalled network/backend.
+    timeout: 30000,
     // Web: browser cookie jar. Native: expoClient attaches Cookie manually; omit credentials.
     credentials: Platform.OS === "web" ? "include" : "omit",
     // Staging accepts Bearer session tokens; required on native when Set-Cookie
