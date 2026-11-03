@@ -2,7 +2,7 @@
   "expo": {
     "name": "Resolve Within",
     "slug": "resolve-within",
-    "version": "1.0.0",
+    "version": "1.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-nkg.png",
     "userInterfaceStyle": "automatic",
