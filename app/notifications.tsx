@@ -15,6 +15,7 @@ import {
   Alert,
   BackHandler,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { IconSymbol } from '@/components/IconSymbol';
 import {
@@ -24,55 +25,11 @@ import {
   cancelReminder,
   cancelAllScheduledNotifications,
 } from '@/utils/notificationHelpers';
+import { REMINDERS, REMINDER_KEYS, DEFAULT_SETTINGS, parseSettings, type ReminderKey, type NotificationSettings } from '@/utils/reminders';
 
 // SecureStore keys may only contain letters, digits, '.', '-' and '_'. The old key
 // ('@resolve_within_notifications') was invalid, so settings never saved; nothing to migrate.
 const STORAGE_KEY = 'resolve_within_notifications';
-
-interface NotificationSettings {
-  pushNotifications: boolean;
-  dailyMessageReminder: boolean;
-  journalReminder: boolean;
-  crisisSupportReminder: boolean;
-}
-
-type ReminderKey = 'dailyMessageReminder' | 'journalReminder' | 'crisisSupportReminder';
-
-// Each reminder has its own fixed notification identifier so it can be scheduled and
-// canceled on its own (turning one off must not cancel the others).
-const REMINDERS: Record<
-  ReminderKey,
-  { identifier: string; title: string; body: string; hour: number; minute: number }
-> = {
-  dailyMessageReminder: {
-    identifier: 'resolve-within-daily-message-reminder',
-    title: 'Daily Message',
-    body: 'Your daily message is ready. Take a moment for yourself.',
-    hour: 9,
-    minute: 0,
-  },
-  journalReminder: {
-    identifier: 'resolve-within-journal-reminder',
-    title: 'Journal Reminder',
-    body: 'Take a moment to reflect and journal your thoughts.',
-    hour: 20,
-    minute: 0,
-  },
-  crisisSupportReminder: {
-    identifier: 'resolve-within-crisis-support-reminder',
-    title: 'You Are Not Alone',
-    body: 'Remember: You have support. Take a breath. You are stronger than you know.',
-    hour: 12,
-    minute: 0,
-  },
-};
-
-const DEFAULT_SETTINGS: NotificationSettings = {
-  pushNotifications: false,
-  dailyMessageReminder: false,
-  journalReminder: false,
-  crisisSupportReminder: false,
-};
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -97,8 +54,8 @@ export default function NotificationsScreen() {
   }, [handleClose]);
 
   const explanationText = isExpoGo
-    ? 'You can control how Resolve Within sends reminders and support notifications. (Note: Push notifications are disabled in Expo Go - they will work in production builds.)'
-    : 'You can control how Resolve Within sends reminders and support notifications.';
+    ? 'Reminders are optional and off by default. (Note: Push notifications are disabled in Expo Go - they will work in production builds.)'
+    : 'Reminders are optional and off by default. They are scheduled on this device only; nothing about them is sent to our servers. Turn any of them off here, or turn off notifications for Resolve Within in your device Settings.';
 
   useEffect(() => {
     loadSettings();
@@ -109,7 +66,7 @@ export default function NotificationsScreen() {
       console.log('NotificationsScreen: Loading saved settings');
       const savedSettings = await SecureStore.getItemAsync(STORAGE_KEY);
       if (savedSettings) {
-        const parsed = JSON.parse(savedSettings);
+        const parsed = parseSettings(JSON.parse(savedSettings));
         console.log('NotificationsScreen: Loaded settings:', parsed);
         setSettings(parsed);
       } else {
@@ -152,9 +109,12 @@ export default function NotificationsScreen() {
       const hasPermission = await requestNotificationPermissions();
       if (!hasPermission) {
         Alert.alert(
-          'Permission Required',
-          'Please enable notifications in your device settings to receive reminders.',
-          [{ text: 'OK' }]
+          'Notifications are off',
+          'To get reminders, allow notifications for Resolve Within in your device Settings. You can turn them off there or here at any time.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
+          ]
         );
         return;
       }
@@ -165,13 +125,7 @@ export default function NotificationsScreen() {
 
     if (!value) {
       await cancelAllScheduledNotifications();
-      const allDisabled = {
-        pushNotifications: false,
-        dailyMessageReminder: false,
-        journalReminder: false,
-        crisisSupportReminder: false,
-      };
-      await saveSettings(allDisabled);
+      await saveSettings({ ...DEFAULT_SETTINGS });
     }
   };
 
@@ -180,8 +134,8 @@ export default function NotificationsScreen() {
 
     if (value && !settings.pushNotifications) {
       Alert.alert(
-        'Enable Push Notifications',
-        'Please enable Push Notifications first to receive reminders.',
+        'Turn on reminders first',
+        'Switch on "Reminders" above first. Nothing is sent until you choose a reminder.',
         [{ text: 'OK' }]
       );
       return;
@@ -200,12 +154,6 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleDailyMessageReminderToggle = (value: boolean) =>
-    handleReminderToggle('dailyMessageReminder', value);
-  const handleJournalReminderToggle = (value: boolean) =>
-    handleReminderToggle('journalReminder', value);
-  const handleCrisisSupportReminderToggle = (value: boolean) =>
-    handleReminderToggle('crisisSupportReminder', value);
 
   if (loading) {
     return (
@@ -293,9 +241,9 @@ export default function NotificationsScreen() {
           <View style={styles.section}>
             <View style={styles.settingItem}>
               <View style={styles.settingTextContainer}>
-                <Text style={styles.settingTitle}>Push Notifications</Text>
+                <Text style={styles.settingTitle}>Reminders</Text>
                 <Text style={styles.settingDescription}>
-                  Receive notifications from the app
+                  Allow gentle, optional reminders on this device
                 </Text>
               </View>
               <Switch
@@ -306,53 +254,21 @@ export default function NotificationsScreen() {
               />
             </View>
 
-            <View style={styles.settingItem}>
-              <View style={styles.settingTextContainer}>
-                <Text style={styles.settingTitle}>Daily Message Reminder</Text>
-                <Text style={styles.settingDescription}>
-                  Get reminded to read your daily message (9:00 AM)
-                </Text>
+            {REMINDER_KEYS.map((key) => (
+              <View style={styles.settingItem} key={key}>
+                <View style={styles.settingTextContainer}>
+                  <Text style={styles.settingTitle}>{REMINDERS[key].label}</Text>
+                  <Text style={styles.settingDescription}>{REMINDERS[key].description}</Text>
+                </View>
+                <Switch
+                  value={settings[key]}
+                  onValueChange={(value) => handleReminderToggle(key, value)}
+                  trackColor={{ false: colors.card, true: colors.accent }}
+                  thumbColor={colors.text}
+                  disabled={!settings.pushNotifications}
+                />
               </View>
-              <Switch
-                value={settings.dailyMessageReminder}
-                onValueChange={handleDailyMessageReminderToggle}
-                trackColor={{ false: colors.card, true: colors.accent }}
-                thumbColor={colors.text}
-                disabled={!settings.pushNotifications}
-              />
-            </View>
-
-            <View style={styles.settingItem}>
-              <View style={styles.settingTextContainer}>
-                <Text style={styles.settingTitle}>Journal Reminder</Text>
-                <Text style={styles.settingDescription}>
-                  Get reminded to journal your thoughts (8:00 PM)
-                </Text>
-              </View>
-              <Switch
-                value={settings.journalReminder}
-                onValueChange={handleJournalReminderToggle}
-                trackColor={{ false: colors.card, true: colors.accent }}
-                thumbColor={colors.text}
-                disabled={!settings.pushNotifications}
-              />
-            </View>
-
-            <View style={styles.settingItem}>
-              <View style={styles.settingTextContainer}>
-                <Text style={styles.settingTitle}>Crisis Support Reminder</Text>
-                <Text style={styles.settingDescription}>
-                  Receive supportive check-ins during difficult times (12:00 PM)
-                </Text>
-              </View>
-              <Switch
-                value={settings.crisisSupportReminder}
-                onValueChange={handleCrisisSupportReminderToggle}
-                trackColor={{ false: colors.card, true: colors.accent }}
-                thumbColor={colors.text}
-                disabled={!settings.pushNotifications}
-              />
-            </View>
+            ))}
           </View>
 
           <View style={styles.bottomPadding} />
